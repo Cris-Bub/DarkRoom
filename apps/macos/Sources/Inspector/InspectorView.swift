@@ -2,6 +2,7 @@ import SwiftUI
 
 struct InspectorView: View {
     let selectedFile: LocalImageFile?
+    @Binding var previewTarget: PreviewTarget
     @Binding var viewerBackground: ViewerBackground
     let isReadOnly: Bool
 
@@ -78,6 +79,13 @@ struct InspectorView: View {
                 }
 
                 DRCollapsibleSection("Viewer", systemImage: "rectangle.dashed", isExpanded: $viewerExpanded) {
+                    Picker("View As", selection: $previewTarget) {
+                        ForEach(PreviewTarget.allCases) { target in
+                            Text(target.label).tag(target)
+                        }
+                    }
+                    .pickerStyle(.menu)
+
                     Picker("Background", selection: $viewerBackground) {
                         ForEach(ViewerBackground.allCases) { background in
                             Text(background.label).tag(background)

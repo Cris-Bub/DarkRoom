@@ -7,7 +7,9 @@
 ## Depends On
 
 - SwiftUI and AppKit for the visible viewer and window/display integration.
-- Image I/O and Core Image for first-pass still image and RAW preview rendering.
+- Image I/O and Core Image for first-pass preview rendering.
+- `ColorPipeline/` for preview target and working-space policy.
+- `RawDecoding/` for swappable RAW decoder behavior.
 - `LocalImageFile` for supported file type and RAW-extension policy.
 - Design-system atoms for empty/loading/error presentation.
 
@@ -19,14 +21,16 @@
 
 ## Responsibilities
 
-- Decode the selected file into a display-referred preview image.
+- Decode the selected file into a preview-target-proofed, display-referred preview image.
 - Keep render status separate from inspector/edit state so controls can become read-only while no trustworthy preview exists.
-- Re-render previews when the selected file or window display color profile changes.
-- Preserve source and display color profile intent in documentation and code.
+- Re-render previews when the selected file, selected preview target, or window display color profile changes.
+- Preserve source, working, preview target, and display color profile intent in documentation and code.
 
 ## Boundaries
 
 - Do not put non-destructive edit graph math here.
+- Do not own preview target definitions or working color-space policy.
+- Do not own RAW decoder implementations.
 - Do not treat the viewer preview cache as export-ready image data.
 - Do not hide RAW rendering failures behind unrelated UI state.
 - Do not add permanent cache/index behavior here; that belongs in a future cache subsystem or engine layer.

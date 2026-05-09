@@ -3,46 +3,70 @@ import CoreImage
 import ImageIO
 
 enum ViewerImageRenderer {
-    static func render(url: URL, displayProfile: ViewerDisplayProfile) throws -> RenderedViewerImage {
-        if LocalImageFile.isRaw(url: url), let rawImage = try renderRawImageIfAvailable(url: url, displayProfile: displayProfile) {
+    static func render(
+        url: URL,
+        displayProfile: ViewerDisplayProfile,
+        previewTarget: PreviewTarget,
+        rawBaseline: RawBaseline = .darkRoomStandard,
+        rawDecoder: any RawDecoder = AppleRawDecoder()
+    ) throws -> RenderedViewerImage {
+        if LocalImageFile.isRaw(url: url),
+           let rawImage = try renderRawImageIfAvailable(
+            url: url,
+            displayProfile: displayProfile,
+            previewTarget: previewTarget,
+            rawBaseline: rawBaseline,
+            rawDecoder: rawDecoder
+           ) {
             return rawImage
         }
 
-        return try renderImageIOImage(url: url, displayProfile: displayProfile)
+        return try renderImageIOImage(
+            url: url,
+            displayProfile: displayProfile,
+            previewTarget: previewTarget
+        )
     }
 
-    private static func renderRawImageIfAvailable(url: URL, displayProfile: ViewerDisplayProfile) throws -> RenderedViewerImage? {
-        guard let rawFilter = CIRAWFilter(imageURL: url) else {
+    private static func renderRawImageIfAvailable(
+        url: URL,
+        displayProfile: ViewerDisplayProfile,
+        previewTarget: PreviewTarget,
+        rawBaseline: RawBaseline,
+        rawDecoder: any RawDecoder
+    ) throws -> RenderedViewerImage? {
+        guard rawDecoder.canDecode(fileURL: url) else {
             return nil
         }
 
-        rawFilter.isDraftModeEnabled = false
-        rawFilter.scaleFactor = 1
-        rawFilter.isGamutMappingEnabled = true
-        rawFilter.extendedDynamicRangeAmount = 0
-
-        if rawFilter.isLensCorrectionSupported {
-            rawFilter.isLensCorrectionEnabled = true
-        }
-
-        guard let outputImage = rawFilter.outputImage else {
-            throw ViewerRenderError.unableToDecode(url.lastPathComponent)
-        }
+        let decodedImage = try rawDecoder.decode(
+            fileURL: url,
+            options: RawDecodeOptions(baseline: rawBaseline)
+        )
 
         let cgImage = try render(
-            outputImage,
+            decodedImage.image,
             displayProfile: displayProfile,
-            fallbackColorSpace: CGColorSpace(name: CGColorSpace.extendedLinearDisplayP3)
+            previewTarget: previewTarget
         )
 
         return RenderedViewerImage(
             cgImage: cgImage,
             sourceKind: .raw,
+            sourceProfileName: decodedImage.metadata.sourceDescription,
+            sourceProfileWasAssumed: false,
+            previewTarget: previewTarget,
+            rawBaseline: rawBaseline,
+            workingColorSpaceName: WorkingColorSpace.displayName,
             displayProfileName: displayProfile.displayName
         )
     }
 
-    private static func renderImageIOImage(url: URL, displayProfile: ViewerDisplayProfile) throws -> RenderedViewerImage {
+    private static func renderImageIOImage(
+        url: URL,
+        displayProfile: ViewerDisplayProfile,
+        previewTarget: PreviewTarget
+    ) throws -> RenderedViewerImage {
         let options = [
             kCGImageSourceShouldCache: true,
             kCGImageSourceShouldCacheImmediately: true
@@ -53,6 +77,7 @@ enum ViewerImageRenderer {
             throw ViewerRenderError.unableToDecode(url.lastPathComponent)
         }
 
+        let sourceProfileWasAssumed = cgImage.colorSpace == nil
         let sourceColorSpace = cgImage.colorSpace ?? CGColorSpace(name: CGColorSpace.sRGB)!
         var ciImage = CIImage(cgImage: cgImage, options: [.colorSpace: sourceColorSpace as Any])
 
@@ -63,12 +88,17 @@ enum ViewerImageRenderer {
         let renderedImage = try render(
             ciImage,
             displayProfile: displayProfile,
-            fallbackColorSpace: sourceColorSpace
+            previewTarget: previewTarget
         )
 
         return RenderedViewerImage(
             cgImage: renderedImage,
             sourceKind: .raster,
+            sourceProfileName: colorSpaceName(sourceColorSpace),
+            sourceProfileWasAssumed: sourceProfileWasAssumed,
+            previewTarget: previewTarget,
+            rawBaseline: nil,
+            workingColorSpaceName: WorkingColorSpace.displayName,
             displayProfileName: displayProfile.displayName
         )
     }
@@ -76,25 +106,37 @@ enum ViewerImageRenderer {
     private static func render(
         _ image: CIImage,
         displayProfile: ViewerDisplayProfile,
-        fallbackColorSpace: CGColorSpace?
+        previewTarget: PreviewTarget
     ) throws -> CGImage {
-        let workingColorSpace = CGColorSpace(name: CGColorSpace.extendedLinearDisplayP3)
-            ?? fallbackColorSpace
-            ?? displayProfile.colorSpace
-
-        let context = CIContext(options: [
-            .workingColorSpace: workingColorSpace,
-            .outputColorSpace: displayProfile.colorSpace,
+        let proofContext = CIContext(options: [
+            .workingColorSpace: WorkingColorSpace.linearROMMRGB,
+            .outputColorSpace: previewTarget.colorSpace,
             .workingFormat: CIFormat.RGBAh
         ])
 
         let extent = image.extent.integral
         guard !extent.isEmpty,
-              let cgImage = context.createCGImage(
+              let proofedImage = proofContext.createCGImage(
                 image,
                 from: extent,
-                format: .RGBA16,
-                colorSpace: displayProfile.colorSpace
+                format: .RGBAh,
+                colorSpace: previewTarget.colorSpace
+              ) else {
+            throw ViewerRenderError.unableToRender
+        }
+
+        let displayImage = CIImage(cgImage: proofedImage, options: [.colorSpace: previewTarget.colorSpace])
+        let displayContext = CIContext(options: [
+            .workingColorSpace: previewTarget.colorSpace,
+            .outputColorSpace: displayProfile.colorSpace,
+            .workingFormat: CIFormat.RGBAh
+        ])
+
+        guard let cgImage = displayContext.createCGImage(
+            displayImage,
+            from: displayImage.extent.integral,
+            format: .RGBA16,
+            colorSpace: displayProfile.colorSpace
               ) else {
             throw ViewerRenderError.unableToRender
         }
@@ -110,15 +152,24 @@ enum ViewerImageRenderer {
 
         return orientation
     }
+
+    private static func colorSpaceName(_ colorSpace: CGColorSpace) -> String {
+        colorSpace.name as String? ?? "Embedded ICC"
+    }
 }
 
 struct RenderedViewerImage: @unchecked Sendable {
     let cgImage: CGImage
     let sourceKind: ViewerSourceKind
+    let sourceProfileName: String
+    let sourceProfileWasAssumed: Bool
+    let previewTarget: PreviewTarget
+    let rawBaseline: RawBaseline?
+    let workingColorSpaceName: String
     let displayProfileName: String
 }
 
-enum ViewerSourceKind: Sendable {
+enum ViewerSourceKind: Sendable, Equatable {
     case raw
     case raster
 }

@@ -3,6 +3,7 @@ import SwiftUI
 struct RootView: View {
     @ObservedObject var library: FolderLibraryModel
     @ObservedObject var viewerRenderModel: ViewerRenderModel
+    @Binding var previewTarget: PreviewTarget
     @Binding var viewerBackground: ViewerBackground
 
     var body: some View {
@@ -13,14 +14,19 @@ struct RootView: View {
             ViewerPane(
                 file: library.selectedImage,
                 background: viewerBackground,
+                previewTarget: previewTarget,
                 renderModel: viewerRenderModel
             )
                 .navigationSplitViewColumnWidth(min: 560, ideal: 760)
         } detail: {
             InspectorView(
                 selectedFile: library.selectedImage,
+                previewTarget: $previewTarget,
                 viewerBackground: $viewerBackground,
-                isReadOnly: !viewerRenderModel.isReady(for: library.selectedImage)
+                isReadOnly: !viewerRenderModel.isReady(
+                    for: library.selectedImage,
+                    previewTarget: previewTarget
+                )
             )
                 .navigationSplitViewColumnWidth(min: 320, ideal: 360, max: 440)
         }

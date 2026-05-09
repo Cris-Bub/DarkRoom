@@ -1,6 +1,6 @@
 # Design System
 
-DarkRoom should feel like a quiet native macOS photo grading workstation: neutral, precise, dense enough for repeated professional use, and visually subordinate to the image. The interface should not feel like a marketing page, a generic dashboard, or a playful consumer editor. It should feel calm, fast, and deliberate.
+DarkRoom should feel like a quiet minimalist beautiful sleek native macOS photo grading workstation: neutral, precise, dense enough for repeated professional use, and visually subordinate to the image. The interface should not feel like a marketing page, a generic dashboard, or a playful consumer editor. It should feel calm, fast, and deliberate.
 
 ## Design Language Statement
 
@@ -63,7 +63,7 @@ Current molecules:
 
 Candidate molecules:
 
-- Background picker row.
+- Viewer proof/background picker row.
 - Image metadata summary.
 - Scope panel header with mode selector.
 
@@ -137,6 +137,8 @@ When changing UI:
 ## Inspector Pattern
 
 The inspector uses a right-side mode rail for major editing pages. `Edit` is the default page; `Crop` and `Mask` are placeholders until those tools exist. Image details do not belong inside edit-control sections. They are revealed from the bottom rail info button and shown as a small, low-prominence panel so metadata does not compete with editing controls.
+
+The Viewer section uses `View As` for output proofing language. It should avoid lower-level wording like "display profile" because the physical display profile is an implementation detail, not the creative/output target the user is choosing.
 
 Edit sections should be collapsible. Adjustment sliders use subdued labels and numeric values with a circular knob: bordered, light stroke, and filled with the local inspector background so the handle reads like a control rather than a filled badge.
 

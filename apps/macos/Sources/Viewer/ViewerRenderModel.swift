@@ -9,10 +9,18 @@ final class ViewerRenderModel: ObservableObject {
     @Published private(set) var displayProfile = ViewerDisplayProfile.current()
 
     private var currentFile: LocalImageFile?
+    private var currentPreviewTarget: PreviewTarget = .webInstagram
+    private var currentRawBaseline: RawBaseline = .darkRoomStandard
     private var renderTask: Task<Void, Never>?
 
-    func render(file: LocalImageFile?) {
+    func render(
+        file: LocalImageFile?,
+        previewTarget: PreviewTarget,
+        rawBaseline: RawBaseline = .darkRoomStandard
+    ) {
         currentFile = file
+        currentPreviewTarget = previewTarget
+        currentRawBaseline = rawBaseline
         renderTask?.cancel()
 
         guard let file else {
@@ -25,6 +33,8 @@ final class ViewerRenderModel: ObservableObject {
         let fileID = file.id
         let url = file.url
         let profile = displayProfile
+        let target = previewTarget
+        let baseline = rawBaseline
 
         image = nil
         renderedFileID = nil
@@ -32,7 +42,12 @@ final class ViewerRenderModel: ObservableObject {
 
         renderTask = Task.detached(priority: .userInitiated) {
             do {
-                let renderedImage = try ViewerImageRenderer.render(url: url, displayProfile: profile)
+                let renderedImage = try ViewerImageRenderer.render(
+                    url: url,
+                    displayProfile: profile,
+                    previewTarget: target,
+                    rawBaseline: baseline
+                )
 
                 guard !Task.isCancelled else {
                     return
@@ -76,15 +91,19 @@ final class ViewerRenderModel: ObservableObject {
         }
 
         displayProfile = nextProfile
-        render(file: currentFile)
+        render(
+            file: currentFile,
+            previewTarget: currentPreviewTarget,
+            rawBaseline: currentRawBaseline
+        )
     }
 
-    func isReady(for file: LocalImageFile?) -> Bool {
+    func isReady(for file: LocalImageFile?, previewTarget: PreviewTarget) -> Bool {
         guard let file else {
             return false
         }
 
-        return renderedFileID == file.id && status.isReady
+        return renderedFileID == file.id && status.isReady(for: previewTarget)
     }
 }
 
@@ -94,9 +113,9 @@ enum ViewerRenderStatus {
     case ready(RenderedViewerImage)
     case failed(String)
 
-    var isReady: Bool {
-        if case .ready = self {
-            return true
+    func isReady(for previewTarget: PreviewTarget) -> Bool {
+        if case .ready(let renderedImage) = self {
+            return renderedImage.previewTarget == previewTarget
         }
 
         return false

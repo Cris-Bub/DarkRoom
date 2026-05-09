@@ -23,6 +23,8 @@ final class LocalImageFileTests: XCTestCase {
         XCTAssertTrue(LocalImageFile.isRaw(url: URL(fileURLWithPath: "/tmp/sony.ARW")))
         XCTAssertTrue(LocalImageFile.isRaw(url: URL(fileURLWithPath: "/tmp/iphone-pro-raw.DNG")))
         XCTAssertFalse(LocalImageFile.isRaw(url: URL(fileURLWithPath: "/tmp/export.JPG")))
+        XCTAssertFalse(LocalImageFile.isRaw(url: URL(fileURLWithPath: "/tmp/export.PNG")))
+        XCTAssertFalse(LocalImageFile.isRaw(url: URL(fileURLWithPath: "/tmp/layered.PSD")))
     }
 
     func testUnsupportedImageExtensionsAreRejected() {

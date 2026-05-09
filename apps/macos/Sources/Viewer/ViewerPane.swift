@@ -4,6 +4,7 @@ import SwiftUI
 struct ViewerPane: View {
     let file: LocalImageFile?
     let background: ViewerBackground
+    let previewTarget: PreviewTarget
     @ObservedObject var renderModel: ViewerRenderModel
 
     var body: some View {
@@ -11,7 +12,7 @@ struct ViewerPane: View {
             background.color
                 .ignoresSafeArea()
 
-            if let image = renderModel.image, renderModel.isReady(for: file) {
+            if let image = renderModel.image, renderModel.isReady(for: file, previewTarget: previewTarget) {
                 Image(nsImage: image)
                     .resizable()
                     .scaledToFit()
@@ -39,8 +40,12 @@ struct ViewerPane: View {
                 )
             }
         )
-        .task(id: file?.id) {
-            renderModel.render(file: file)
+        .task(id: renderRequestID) {
+            renderModel.render(file: file, previewTarget: previewTarget)
         }
+    }
+
+    private var renderRequestID: String {
+        "\(file?.id ?? "none")|\(previewTarget.rawValue)"
     }
 }
