@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`ColorPipeline/` owns V1 color-management policy shared by preview and future export paths.
+`ColorPipeline/` owns V1 color-management policy shared by preview and export paths.
 
 ## Depends On
 

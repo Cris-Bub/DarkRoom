@@ -4,7 +4,7 @@ DarkRoom should be scene-referred and wide-gamut internally, with output proofin
 
 ## Starting Position
 
-The first implemented code is CPU reference math for exposure and pivoted contrast in `darkroom_core`. These functions are intentionally simple and testable. They establish the pattern for future color work: define behavior, write a CPU reference, then allow GPU paths to match it.
+The first implemented code is CPU reference math for exposure, pivoted contrast, and V1 light-control parameter mapping in `darkroom_core`. These functions are intentionally simple and testable. They establish the pattern for future color work: define behavior, write a CPU reference, then allow GPU paths to match it.
 
 ## Intended Pipeline
 
@@ -12,7 +12,7 @@ The first implemented code is CPU reference math for exposure and pivoted contra
 2. Normalize into a scene-referred working representation.
 3. Apply non-destructive edit recipe operations.
 4. Convert through the selected preview/export target.
-5. Render viewer output through the current monitor profile or embed the export profile in a file.
+5. Render viewer output through the current monitor profile or write the export target as an embedded-profile file.
 6. Generate scopes from defined pipeline taps, not arbitrary UI pixels.
 
 ## V1 Preview Targets
@@ -24,13 +24,16 @@ The viewer has a `View As` control with two V1 output-proof targets:
 
 Preview targets are not display profiles. A preview target describes the output condition being simulated. The current display profile describes how the physical Mac display must be driven to show that output condition correctly.
 
-## Viewer Accuracy Baseline
+## Viewer And Export Accuracy Baseline
 
-The first viewer implementation now has an explicit preview render boundary instead of relying on `NSImage(contentsOf:)`.
+The first viewer and export implementations now share `ImagePipeline/` instead of relying on `NSImage(contentsOf:)` or cached viewer pixels.
 
 - RAW files are routed through the `RawDecoder` protocol. V1 ships `AppleRawDecoder`, backed by Apple's `CIRAWFilter`, with draft mode off, lens correction enabled when supported, gamut mapping enabled, and extended dynamic range output disabled for the current SDR viewer baseline.
 - Raster files are decoded through Image I/O, preserving source color tags where available and treating untagged raster input as sRGB.
-- Core Image renders through Linear ROMM RGB, then proof-converts to the selected preview target, then display-converts to the current window/display color space.
+- Core Image renders through Linear ROMM RGB, applies the V1 light recipe using Rust-derived parameter math, then proof-converts to the selected preview/export target.
+- Viewer preview renders through a Metal-backed Core Image surface sized to the current viewer bounds and adds one final display conversion into the current window/display color space. During active slider drags, the viewer uses a lower-resolution interactive working image and then renders the normal viewer-resolution preview when the drag ends.
+- Interactive viewer updates reuse prepared source data and render directly into the Metal drawable so slider drags do not queue stale AppKit image replacements.
+- Export stops at the selected output target and writes JPEG, PNG, or TIFF through Image I/O with the rendered output color space.
 - The viewer observes window display/backing color-space changes and invalidates the preview cache when the app moves between displays or the display profile changes.
 - The rendered viewer image is display-referred preview data only. It must not become the export source or the persistent edit representation.
 
@@ -40,11 +43,14 @@ This is display-management accuracy, not Lightroom visual matching. Lightroom/Ca
 
 - Exposure is a scene-linear stop control: `output = input * 2^EV`.
 - Contrast is pivoted around middle gray, initially `0.18`.
+- Highlights and shadows should behave like bounded tone-shaping controls, not independent high/low gain multipliers. Extreme settings must preserve tone ordering, avoid dragging highlights below middle gray, and avoid lifting true black into muddy gray.
 - Display transforms are separate from edit operations.
 - RAW white balance should eventually happen at RAW stage when RAW data is available.
 - Viewer readiness should gate edit controls; users should not be able to move grading controls when the selected image has not decoded into the current display preview.
 - Export must re-render from source plus edit recipe. It must not write cached viewer pixels.
-- Exports must embed their output profile; silent untagged export is a bug.
+- Exports must carry their output color profile; silent untagged export is a bug.
+- V1 export target equals the current `View As` target until a dedicated export dialog/preset system exists.
+- Non-neutral edit recipes must persist outside the original image file so viewer and export can recover the same recipe after app relaunch.
 
 ## Open Decisions
 

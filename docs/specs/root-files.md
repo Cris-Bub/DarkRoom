@@ -34,11 +34,11 @@ Update when: the canonical agent file moves or changes name.
 
 Purpose: source-controlled Tuist project definition for the macOS app and tests.
 
-Depends on: Tuist, app source under `apps/macos`, and resource files.
+Depends on: Tuist, app source under `apps/macos`, resource files, and the locally built `darkroom_core` static library.
 
-Affords: generated Xcode workspace or project without treating Xcode as the source of truth.
+Affords: generated Xcode workspace or project without treating Xcode as the source of truth, including linkage to the Rust core used by the macOS app.
 
-Update when: app targets, bundle IDs, resources, tests, deployment targets, or source paths change.
+Update when: app targets, bundle IDs, resources, tests, deployment targets, source paths, or linked native libraries change.
 
 ## `Cargo.toml`
 

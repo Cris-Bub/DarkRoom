@@ -6,10 +6,13 @@ The product direction is deliberately closer to a still-image grading room than 
 
 ## Current State
 
-This first pass lays down Milestone 0 infrastructure:
+DarkRoom now has the early V1 shell plus the first color-managed edit/export path:
 
 - Native SwiftUI/AppKit macOS shell source under `apps/macos`
 - Rust workspace with a first `darkroom_core` crate under `crates`
+- Local image browsing, color-managed viewing, and persisted light edits
+- Live DarkRoom XMP sidecars for non-neutral edit recipes
+- JPEG, PNG, and TIFF export rendered from source plus recipe
 - Cursor-first script entrypoints under `scripts`
 - Architecture, workflow, design system, color, edit graph, masking, and scopes docs under `docs`
 - Agent operating rules in `Agent.md`
@@ -78,9 +81,11 @@ SwiftUI design-system code lives under `apps/macos/Sources/DesignSystem`. Prefer
 
 ### Milestone 1: Non-Destructive Edit Graph Prototype
 
-- Add exposure, contrast, and contrast pivot controls.
-- Store edits as recipe data.
+- Add exposure, contrast, highlights, and shadows controls.
+- Store edits as non-destructive recipe data.
+- Persist non-neutral edits into sidecars beside source images.
 - Keep originals untouched.
+- Export from source plus recipe.
 - Persist edit state.
 - Add CPU reference tests for core math.
 

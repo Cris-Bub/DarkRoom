@@ -4,7 +4,10 @@ struct InspectorView: View {
     let selectedFile: LocalImageFile?
     @Binding var previewTarget: PreviewTarget
     @Binding var viewerBackground: ViewerBackground
+    @Binding var editRecipe: EditRecipe
     let isReadOnly: Bool
+    var onAdjustmentEditingChanged: (Bool) -> Void = { _ in }
+    let onResetEdits: () -> Void
 
     @State private var selectedMode: InspectorMode = .edit
     @State private var showsImageDetails = false
@@ -12,12 +15,6 @@ struct InspectorView: View {
     @State private var viewerExpanded = true
     @State private var lightExpanded = true
     @State private var curveExpanded = true
-    @State private var exposure = 0.0
-    @State private var contrast = 0.0
-    @State private var highlights = 0.0
-    @State private var shadows = 0.0
-    @State private var whites = 0.0
-    @State private var blacks = 0.0
 
     var body: some View {
         HStack(spacing: 0) {
@@ -97,45 +94,40 @@ struct InspectorView: View {
                 DRCollapsibleSection("Light", systemImage: "sun.max", isExpanded: $lightExpanded) {
                     DRAdjustmentRow(
                         title: "Exposure",
-                        value: $exposure,
-                        range: -5...5,
-                        displayValue: signedValue(exposure, fractionDigits: 2)
+                        value: $editRecipe.light.exposureEV,
+                        range: LightAdjustments.exposureRange,
+                        displayValue: signedValue(editRecipe.light.exposureEV, fractionDigits: 2),
+                        onEditingChanged: onAdjustmentEditingChanged
                     )
 
                     DRAdjustmentRow(
                         title: "Contrast",
-                        value: $contrast,
-                        range: -100...100,
-                        displayValue: signedValue(contrast)
+                        value: $editRecipe.light.contrast,
+                        range: LightAdjustments.contrastRange,
+                        displayValue: signedValue(editRecipe.light.contrast),
+                        onEditingChanged: onAdjustmentEditingChanged
                     )
 
                     DRAdjustmentRow(
                         title: "Highlights",
-                        value: $highlights,
-                        range: -100...100,
-                        displayValue: signedValue(highlights)
+                        value: $editRecipe.light.highlights,
+                        range: LightAdjustments.highlightsRange,
+                        displayValue: signedValue(editRecipe.light.highlights),
+                        onEditingChanged: onAdjustmentEditingChanged
                     )
 
                     DRAdjustmentRow(
                         title: "Shadows",
-                        value: $shadows,
-                        range: -100...100,
-                        displayValue: signedValue(shadows)
+                        value: $editRecipe.light.shadows,
+                        range: LightAdjustments.shadowsRange,
+                        displayValue: signedValue(editRecipe.light.shadows),
+                        onEditingChanged: onAdjustmentEditingChanged
                     )
 
-                    DRAdjustmentRow(
-                        title: "Whites",
-                        value: $whites,
-                        range: -100...100,
-                        displayValue: signedValue(whites)
-                    )
-
-                    DRAdjustmentRow(
-                        title: "Blacks",
-                        value: $blacks,
-                        range: -100...100,
-                        displayValue: signedValue(blacks)
-                    )
+                    Button("Reset Light", action: onResetEdits)
+                        .buttonStyle(.borderless)
+                        .foregroundStyle(DarkRoomDesign.Palette.subtleText)
+                        .disabled(editRecipe.isNeutral)
                 }
 
                 DRCollapsibleSection("Curve", systemImage: "point.topleft.down.curvedto.point.bottomright.up", isExpanded: $curveExpanded) {

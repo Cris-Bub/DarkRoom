@@ -1,161 +1,92 @@
 import AppKit
-import CoreImage
-import ImageIO
 
 enum ViewerImageRenderer {
+    static func prepareSource(
+        url: URL,
+        rawBaseline: RawBaseline = .darkRoomStandard,
+        rawDecoder: any RawDecoder = AppleRawDecoder()
+    ) throws -> PreparedViewerSource {
+        let preparedSource = try ImagePipelineRenderer.prepareSource(
+            url: url,
+            rawBaseline: rawBaseline,
+            rawDecoder: rawDecoder
+        )
+
+        return PreparedViewerSource(pipelineSource: preparedSource)
+    }
+
     static func render(
         url: URL,
         displayProfile: ViewerDisplayProfile,
         previewTarget: PreviewTarget,
+        editRecipe: EditRecipe = .neutral,
+        maximumPixelSize: CGSize? = nil,
         rawBaseline: RawBaseline = .darkRoomStandard,
-        rawDecoder: any RawDecoder = AppleRawDecoder()
+        rawDecoder: any RawDecoder = AppleRawDecoder(),
+        contextProvider: ImagePipelineRenderContextProvider = .shared
     ) throws -> RenderedViewerImage {
-        if LocalImageFile.isRaw(url: url),
-           let rawImage = try renderRawImageIfAvailable(
+        let renderedImage = try ImagePipelineRenderer.renderDisplayPreview(
             url: url,
-            displayProfile: displayProfile,
+            displayColorSpace: displayProfile.colorSpace,
+            displayProfileName: displayProfile.displayName,
             previewTarget: previewTarget,
+            editRecipe: editRecipe,
+            maximumPixelSize: maximumPixelSize,
             rawBaseline: rawBaseline,
-            rawDecoder: rawDecoder
-           ) {
-            return rawImage
-        }
+            rawDecoder: rawDecoder,
+            contextProvider: contextProvider
+        )
 
-        return try renderImageIOImage(
-            url: url,
-            displayProfile: displayProfile,
-            previewTarget: previewTarget
+        return renderedViewerImage(
+            from: renderedImage,
+            fallbackDisplayProfileName: displayProfile.displayName
         )
     }
 
-    private static func renderRawImageIfAvailable(
-        url: URL,
+    static func render(
+        preparedSource: PreparedViewerSource,
         displayProfile: ViewerDisplayProfile,
         previewTarget: PreviewTarget,
-        rawBaseline: RawBaseline,
-        rawDecoder: any RawDecoder
-    ) throws -> RenderedViewerImage? {
-        guard rawDecoder.canDecode(fileURL: url) else {
-            return nil
-        }
-
-        let decodedImage = try rawDecoder.decode(
-            fileURL: url,
-            options: RawDecodeOptions(baseline: rawBaseline)
-        )
-
-        let cgImage = try render(
-            decodedImage.image,
-            displayProfile: displayProfile,
-            previewTarget: previewTarget
-        )
-
-        return RenderedViewerImage(
-            cgImage: cgImage,
-            sourceKind: .raw,
-            sourceProfileName: decodedImage.metadata.sourceDescription,
-            sourceProfileWasAssumed: false,
-            previewTarget: previewTarget,
-            rawBaseline: rawBaseline,
-            workingColorSpaceName: WorkingColorSpace.displayName,
-            displayProfileName: displayProfile.displayName
-        )
-    }
-
-    private static func renderImageIOImage(
-        url: URL,
-        displayProfile: ViewerDisplayProfile,
-        previewTarget: PreviewTarget
+        editRecipe: EditRecipe = .neutral,
+        maximumPixelSize: CGSize? = nil,
+        contextProvider: ImagePipelineRenderContextProvider = .shared
     ) throws -> RenderedViewerImage {
-        let options = [
-            kCGImageSourceShouldCache: true,
-            kCGImageSourceShouldCacheImmediately: true
-        ] as CFDictionary
-
-        guard let source = CGImageSourceCreateWithURL(url as CFURL, options),
-              let cgImage = CGImageSourceCreateImageAtIndex(source, 0, options) else {
-            throw ViewerRenderError.unableToDecode(url.lastPathComponent)
-        }
-
-        let sourceProfileWasAssumed = cgImage.colorSpace == nil
-        let sourceColorSpace = cgImage.colorSpace ?? CGColorSpace(name: CGColorSpace.sRGB)!
-        var ciImage = CIImage(cgImage: cgImage, options: [.colorSpace: sourceColorSpace as Any])
-
-        if let orientation = imageOrientation(from: source) {
-            ciImage = ciImage.oriented(forExifOrientation: Int32(orientation))
-        }
-
-        let renderedImage = try render(
-            ciImage,
-            displayProfile: displayProfile,
-            previewTarget: previewTarget
-        )
-
-        return RenderedViewerImage(
-            cgImage: renderedImage,
-            sourceKind: .raster,
-            sourceProfileName: colorSpaceName(sourceColorSpace),
-            sourceProfileWasAssumed: sourceProfileWasAssumed,
+        let renderedImage = try ImagePipelineRenderer.renderDisplayPreview(
+            preparedSource: preparedSource.pipelineSource,
+            displayColorSpace: displayProfile.colorSpace,
+            displayProfileName: displayProfile.displayName,
             previewTarget: previewTarget,
-            rawBaseline: nil,
-            workingColorSpaceName: WorkingColorSpace.displayName,
-            displayProfileName: displayProfile.displayName
+            editRecipe: editRecipe,
+            maximumPixelSize: maximumPixelSize,
+            contextProvider: contextProvider
+        )
+
+        return renderedViewerImage(
+            from: renderedImage,
+            fallbackDisplayProfileName: displayProfile.displayName
         )
     }
 
-    private static func render(
-        _ image: CIImage,
-        displayProfile: ViewerDisplayProfile,
-        previewTarget: PreviewTarget
-    ) throws -> CGImage {
-        let proofContext = CIContext(options: [
-            .workingColorSpace: WorkingColorSpace.linearROMMRGB,
-            .outputColorSpace: previewTarget.colorSpace,
-            .workingFormat: CIFormat.RGBAh
-        ])
-
-        let extent = image.extent.integral
-        guard !extent.isEmpty,
-              let proofedImage = proofContext.createCGImage(
-                image,
-                from: extent,
-                format: .RGBAh,
-                colorSpace: previewTarget.colorSpace
-              ) else {
-            throw ViewerRenderError.unableToRender
-        }
-
-        let displayImage = CIImage(cgImage: proofedImage, options: [.colorSpace: previewTarget.colorSpace])
-        let displayContext = CIContext(options: [
-            .workingColorSpace: previewTarget.colorSpace,
-            .outputColorSpace: displayProfile.colorSpace,
-            .workingFormat: CIFormat.RGBAh
-        ])
-
-        guard let cgImage = displayContext.createCGImage(
-            displayImage,
-            from: displayImage.extent.integral,
-            format: .RGBA16,
-            colorSpace: displayProfile.colorSpace
-              ) else {
-            throw ViewerRenderError.unableToRender
-        }
-
-        return cgImage
+    private static func renderedViewerImage(
+        from renderedImage: PipelineRenderedImage,
+        fallbackDisplayProfileName: String
+    ) -> RenderedViewerImage {
+        return RenderedViewerImage(
+            cgImage: renderedImage.cgImage,
+            sourceKind: ViewerSourceKind(pipelineSourceKind: renderedImage.sourceKind),
+            sourceProfileName: renderedImage.sourceProfileName,
+            sourceProfileWasAssumed: renderedImage.sourceProfileWasAssumed,
+            previewTarget: renderedImage.previewTarget,
+            rawBaseline: renderedImage.rawBaseline,
+            editRecipe: renderedImage.editRecipe,
+            workingColorSpaceName: renderedImage.workingColorSpaceName,
+            displayProfileName: renderedImage.displayProfileName ?? fallbackDisplayProfileName
+        )
     }
+}
 
-    private static func imageOrientation(from source: CGImageSource) -> Int? {
-        guard let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
-              let orientation = properties[kCGImagePropertyOrientation] as? Int else {
-            return nil
-        }
-
-        return orientation
-    }
-
-    private static func colorSpaceName(_ colorSpace: CGColorSpace) -> String {
-        colorSpace.name as String? ?? "Embedded ICC"
-    }
+struct PreparedViewerSource: @unchecked Sendable {
+    fileprivate let pipelineSource: PipelinePreparedSource
 }
 
 struct RenderedViewerImage: @unchecked Sendable {
@@ -165,6 +96,7 @@ struct RenderedViewerImage: @unchecked Sendable {
     let sourceProfileWasAssumed: Bool
     let previewTarget: PreviewTarget
     let rawBaseline: RawBaseline?
+    let editRecipe: EditRecipe
     let workingColorSpaceName: String
     let displayProfileName: String
 }
@@ -172,6 +104,15 @@ struct RenderedViewerImage: @unchecked Sendable {
 enum ViewerSourceKind: Sendable, Equatable {
     case raw
     case raster
+
+    init(pipelineSourceKind: PipelineSourceKind) {
+        switch pipelineSourceKind {
+        case .raw:
+            self = .raw
+        case .raster:
+            self = .raster
+        }
+    }
 }
 
 enum ViewerRenderError: LocalizedError {

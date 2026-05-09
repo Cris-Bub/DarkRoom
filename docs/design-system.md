@@ -76,6 +76,7 @@ Current organisms:
 - Sidebar image browser.
 - Viewer pane.
 - Inspector pane with edit/crop/mask rail and subtle image details panel.
+- Toolbar export action with compact progress/status feedback.
 
 Candidate organisms:
 
@@ -140,6 +141,8 @@ The inspector uses a right-side mode rail for major editing pages. `Edit` is the
 
 The Viewer section uses `View As` for output proofing language. It should avoid lower-level wording like "display profile" because the physical display profile is an implementation detail, not the creative/output target the user is choosing.
 
-Edit sections should be collapsible. Adjustment sliders use subdued labels and numeric values with a circular knob: bordered, light stroke, and filled with the local inspector background so the handle reads like a control rather than a filled badge.
+Edit sections should be collapsible. V1 light controls are Exposure, Contrast, Highlights, and Shadows. Adjustment sliders use subdued labels and numeric values with a circular knob: bordered, light stroke, and filled with the local inspector background so the handle reads like a control rather than a filled badge. Sliders should surface active drag state to feature code so viewer previews can switch into a faster interactive render mode while the pointer is down.
 
 Editing controls must visibly enter a read-only state when no selected image has a rendered preview for the current display. The disabled state should preserve layout and hierarchy, but reduce contrast enough that users do not mistake unavailable controls for active grading state.
+
+Export should stay quiet and native at V1: a toolbar action opens the macOS save panel, reuses the current `View As` output target, and shows compact status instead of introducing a large custom export surface before presets, resizing, metadata policy, or batch behavior exist.

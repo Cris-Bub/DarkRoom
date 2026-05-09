@@ -5,6 +5,7 @@ struct DRAdjustmentRow: View {
     @Binding var value: Double
     let range: ClosedRange<Double>
     let displayValue: String
+    var onEditingChanged: (Bool) -> Void = { _ in }
 
     var body: some View {
         VStack(alignment: .leading, spacing: DarkRoomDesign.Spacing.small) {
@@ -20,7 +21,11 @@ struct DRAdjustmentRow: View {
                     .foregroundStyle(DarkRoomDesign.Palette.subtleText)
             }
 
-            DRAdjustmentSlider(value: $value, range: range)
+            DRAdjustmentSlider(
+                value: $value,
+                range: range,
+                onEditingChanged: onEditingChanged
+            )
         }
     }
 }
