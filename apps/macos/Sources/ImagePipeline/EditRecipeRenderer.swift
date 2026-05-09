@@ -11,24 +11,7 @@ enum EditRecipeRenderer {
             throw ImagePipelineRenderError.unableToCreateEditKernel
         }
 
-        let light = recipe.light
-        let arguments: [Any] = [
-            image,
-            light.exposureGain,
-            light.contrastExponent,
-            LightAdjustments.contrastPivot,
-            light.normalizedHighlights,
-            light.normalizedShadows,
-            light.shadowLiftLimit,
-            light.shadowDropLimit,
-            light.highlightPullLimit,
-            light.highlightBoostLimit,
-            light.shadowMaskStart,
-            light.shadowMaskEnd,
-            light.shadowBlackAnchorEnd,
-            light.highlightMaskStart,
-            light.highlightMaskEnd
-        ]
+        let arguments: [Any] = [image] + recipe.light.kernelParameters.map { Double($0) }
 
         guard let editedImage = kernel.apply(extent: image.extent, arguments: arguments) else {
             throw ImagePipelineRenderError.unableToApplyEditRecipe
@@ -42,46 +25,46 @@ enum EditRecipeRenderer {
         kernel vec4 darkroom_light(
             __sample pixel,
             float exposureGain,
-            float contrastExponent,
-            float pivot,
-            float highlights,
-            float shadows,
-            float shadowLiftLimit,
-            float shadowDropLimit,
-            float highlightPullLimit,
-            float highlightBoostLimit,
-            float shadowMaskStart,
-            float shadowMaskEnd,
-            float shadowBlackAnchorEnd,
-            float highlightMaskStart,
-            float highlightMaskEnd
+            float contrastStrength,
+            float pivotEV,
+            float highlightsEV,
+            float shadowsEV,
+            float whitesEV,
+            float blacksEV,
+            float middleGray,
+            float toneEpsilon,
+            float lumaRed,
+            float lumaGreen,
+            float lumaBlue,
+            float contrastMaxEV,
+            float contrastRolloffEV,
+            float shadowZoneStartEV,
+            float shadowZoneFullEV,
+            float highlightZoneStartEV,
+            float highlightZoneFullEV,
+            float blackZoneStartEV,
+            float blackZoneFullEV,
+            float whiteZoneStartEV,
+            float whiteZoneFullEV,
+            float endpointMaxEV
         ) {
-            vec3 color = pixel.rgb * exposureGain;
+            vec3 color = max(pixel.rgb * exposureGain, vec3(0.0));
+            float luma = dot(color, vec3(lumaRed, lumaGreen, lumaBlue));
+            float safeLuma = max(luma, toneEpsilon);
+            float z = log2(safeLuma / max(middleGray, toneEpsilon));
 
-            color = pivot * pow(max(color / pivot, vec3(0.0)), vec3(contrastExponent));
+            z += shadowsEV * smoothstep(shadowZoneStartEV, shadowZoneFullEV, -z);
+            z += highlightsEV * smoothstep(highlightZoneStartEV, highlightZoneFullEV, z);
+            z += blacksEV * smoothstep(blackZoneStartEV, blackZoneFullEV, -z);
+            z += whitesEV * smoothstep(whiteZoneStartEV, whiteZoneFullEV, z);
 
-            float luma = dot(color, vec3(0.2126, 0.7152, 0.0722));
-            float shadowMask = 1.0 - smoothstep(shadowMaskStart, shadowMaskEnd, luma);
-            float shadowLiftMask = shadowMask * smoothstep(0.0, shadowBlackAnchorEnd, luma);
-            float highlightMask = smoothstep(highlightMaskStart, highlightMaskEnd, luma);
-            float targetLuma = luma;
+            float centered = z - pivotEV;
+            float scaledCenter = centered / max(contrastRolloffEV, 0.001);
+            float contrastCurve = scaledCenter / (1.0 + abs(scaledCenter));
+            z += contrastStrength * contrastMaxEV * contrastCurve;
 
-            if (shadows >= 0.0) {
-                float distanceToPivot = max(pivot - targetLuma, 0.0);
-                targetLuma += distanceToPivot * shadows * shadowLiftLimit * shadowLiftMask;
-            } else {
-                float darken = -shadows * shadowDropLimit * shadowMask;
-                targetLuma *= max(0.0, 1.0 - darken);
-            }
-
-            if (highlights >= 0.0) {
-                targetLuma *= 1.0 + highlights * highlightBoostLimit * highlightMask;
-            } else {
-                float distanceFromPivot = max(targetLuma - pivot, 0.0);
-                targetLuma -= distanceFromPivot * -highlights * highlightPullLimit * highlightMask;
-            }
-
-            float ratio = targetLuma / max(luma, 0.000001);
+            float targetLuma = max(middleGray, toneEpsilon) * pow(2.0, z);
+            float ratio = targetLuma / safeLuma;
             color *= max(0.0, ratio);
 
             return vec4(color, pixel.a);

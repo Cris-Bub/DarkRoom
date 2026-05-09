@@ -18,7 +18,7 @@
 - A viewer pane that displays the selected file against the chosen background.
 - A Metal-backed live preview surface that applies the current edit recipe directly into the viewer drawable.
 - A render model that reports whether the selected image has decoded into the current display preview.
-- A displayable previous preview during same-file edit rerenders so light-control drags do not blank the image between frames.
+- A displayable previous preview during same-file edit rerenders so tonal-control drags do not blank the image between frames.
 - A latest-request-wins render scheduler for interactive control drags so stale slider positions do not queue up behind the current frame.
 - A display-profile-aware preview cache that can be invalidated when the window moves between screens or the backing color space changes.
 

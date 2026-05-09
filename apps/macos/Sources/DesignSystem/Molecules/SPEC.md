@@ -12,13 +12,13 @@
 ## Affords
 
 - Repeated inspector control groups such as collapsible sections and adjustment rows.
-- Adjustment sliders that can report active drag state to feature modules for interactive preview scheduling.
+- Adjustment rows and sliders that can report active drag state to feature modules for interactive preview scheduling and carry plain-language help text.
 
 ## Responsibilities
 
 - Keep molecules presentational or narrowly interactive.
 - Accept data and bindings from feature modules instead of owning feature state.
-- Surface generic interaction lifecycle callbacks without knowing what the feature does with them.
+- Surface generic interaction lifecycle callbacks and help text without knowing what the feature does with them.
 
 ## Boundaries
 

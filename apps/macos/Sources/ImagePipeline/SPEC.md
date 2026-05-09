@@ -8,7 +8,7 @@
 
 - Core Image and Image I/O for V1 raster processing.
 - `ColorPipeline/` for preview/export target profiles and working-space policy.
-- `EditGraph/` for non-destructive recipe values and Rust-derived light parameters.
+- `EditGraph/` for non-destructive recipe values and Rust-derived tonal parameters.
 - `RawDecoding/` for RAW source interpretation.
 - `LocalImageFile` for source file type policy.
 
@@ -27,8 +27,8 @@
 - Expose source preparation separately from display rendering so interactive preview updates do not reload the same source for every slider tick.
 - Support bounded preview source and output sizes for live viewing while preserving full-resolution source-plus-recipe export.
 - Support bounded histogram renders from source plus recipe so analysis does not sample viewer pixels.
-- Apply V1 light adjustments in the shared pipeline using parameters supplied by the Rust-owned recipe math.
-- Preserve tone ordering for shadow/highlight recovery; these controls should reshape luminance with bounded toe/shoulder behavior rather than invert or cross tonal regions.
+- Apply V1 tonal adjustments in the shared pipeline using parameters supplied by the Rust-owned recipe math.
+- Preserve tone ordering for the DarkRoom Tonal Curve v1; global tonal controls should reshape luminance with bounded toe/shoulder behavior rather than invert or cross tonal regions.
 - Convert edited output through Linear ROMM RGB into selected preview/export targets.
 - Keep display profile conversion as a preview-only final stage.
 
@@ -42,4 +42,4 @@
 
 ## Update Triggers
 
-Update when decode strategy, edit math placement, Rust bridge usage, preview/export parity rules, or pipeline ownership changes.
+Update when decode strategy, edit math placement, tonal curve behavior, Rust bridge usage, preview/export parity rules, or pipeline ownership changes.

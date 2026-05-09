@@ -12,15 +12,15 @@
 ## Affords
 
 - Scene-linear exposure reference behavior.
-- Pivoted contrast reference behavior.
-- V1 light recipe parameter mapping for exposure, contrast, bounded highlights, and bounded shadows.
-- C ABI exports that the macOS target can link against for light-control parameter math, histogram binning, and per-pixel light recipe application used by the interactive histogram fast path.
+- Legacy pivoted contrast reference behavior kept for focused math tests.
+- V1 `darkroom_tonal_curve_v1` recipe parameter mapping for exposure, contrast, pivot, bounded highlights, bounded shadows, whites, and blacks.
+- C ABI exports that the macOS target can link against for tonal parameter math, histogram binning, and per-pixel tone recipe application used by the interactive histogram fast path.
 - A minimal light recipe model for early edit graph work.
 
 ## Responsibilities
 
 - Keep core math deterministic and well tested.
-- Keep shadow/highlight tone shaping monotonic and bounded so extreme settings cannot invert tonal order.
+- Keep the V1 tonal curve monotonic and bounded so extreme settings cannot invert tonal order.
 - Keep histogram binning deterministic and fast enough for interactive inspector updates.
 - Prefer small functions with direct tests before broader graph abstractions.
 - Provide behavior that Swift and future shader paths can match.
@@ -34,4 +34,4 @@
 
 ## Update Triggers
 
-Update when new edit operations, serialization choices, C ABI boundaries, public API boundaries, or engine dependencies are added.
+Update when new edit operations, tonal curve versions, serialization choices, C ABI boundaries, public API boundaries, or engine dependencies are added.

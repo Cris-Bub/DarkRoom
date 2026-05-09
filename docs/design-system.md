@@ -144,7 +144,7 @@ The inspector histogram sits above the edit controls. The body is drawn as a per
 
 The Viewer section uses `View As` for output proofing language. It should avoid lower-level wording like "display profile" because the physical display profile is an implementation detail, not the creative/output target the user is choosing.
 
-Edit sections should be collapsible. V1 light controls are Exposure, Contrast, Highlights, and Shadows. Adjustment sliders use subdued labels and numeric values with a circular knob: bordered, light stroke, and filled with the local inspector background so the handle reads like a control rather than a filled badge. Sliders should surface active drag state to feature code so viewer previews can switch into a faster interactive render mode while the pointer is down.
+Edit sections should be collapsible. V1 tonal controls are Exposure, Contrast, Pivot, Highlights, Shadows, Whites, and Blacks. Adjustment sliders use subdued labels and numeric values with a circular knob: bordered, light stroke, and filled with the local inspector background so the handle reads like a control rather than a filled badge. Sliders should surface active drag state to feature code so viewer previews can switch into a faster interactive render mode while the pointer is down. Tooltips should be plain-language descriptions of the tonal intent, not implementation terms.
 
 Editing controls must visibly enter a read-only state when no selected image has a rendered preview for the current display. The disabled state should preserve layout and hierarchy, but reduce contrast enough that users do not mistake unavailable controls for active grading state.
 

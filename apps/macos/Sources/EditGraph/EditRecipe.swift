@@ -11,26 +11,26 @@ struct EditRecipe: Codable, Equatable, Hashable, Sendable {
 }
 
 struct LightAdjustments: Codable, Equatable, Hashable, Sendable {
+    static let curveModel = "darkroom_tonal_curve_v1"
+
     var exposureEV = 0.0
     var contrast = 0.0
+    var pivotEV = 0.0
     var highlights = 0.0
     var shadows = 0.0
+    var whites = 0.0
+    var blacks = 0.0
 
     static let exposureRange = -5.0...5.0
     static let contrastRange = -100.0...100.0
+    static let pivotRange = -2.0...2.0
     static let highlightsRange = -100.0...100.0
     static let shadowsRange = -100.0...100.0
-
-    static var contrastPivot: Double {
-        DarkroomCoreLightMath.contrastPivot
-    }
+    static let whitesRange = -100.0...100.0
+    static let blacksRange = -100.0...100.0
 
     var exposureGain: Double {
         DarkroomCoreLightMath.exposureGain(exposureEV: exposureEV)
-    }
-
-    var contrastExponent: Double {
-        DarkroomCoreLightMath.contrastExponent(contrast: contrast)
     }
 
     var normalizedHighlights: Double {
@@ -41,39 +41,15 @@ struct LightAdjustments: Codable, Equatable, Hashable, Sendable {
         DarkroomCoreLightMath.normalizedSlider(shadows)
     }
 
-    var shadowLiftLimit: Double {
-        DarkroomCoreLightMath.shadowLiftLimit
+    var normalizedWhites: Double {
+        DarkroomCoreLightMath.normalizedSlider(whites)
     }
 
-    var shadowDropLimit: Double {
-        DarkroomCoreLightMath.shadowDropLimit
+    var normalizedBlacks: Double {
+        DarkroomCoreLightMath.normalizedSlider(blacks)
     }
 
-    var highlightPullLimit: Double {
-        DarkroomCoreLightMath.highlightPullLimit
-    }
-
-    var highlightBoostLimit: Double {
-        DarkroomCoreLightMath.highlightBoostLimit
-    }
-
-    var shadowMaskStart: Double {
-        DarkroomCoreLightMath.shadowMaskStart
-    }
-
-    var shadowMaskEnd: Double {
-        DarkroomCoreLightMath.shadowMaskEnd
-    }
-
-    var shadowBlackAnchorEnd: Double {
-        DarkroomCoreLightMath.shadowBlackAnchorEnd
-    }
-
-    var highlightMaskStart: Double {
-        DarkroomCoreLightMath.highlightMaskStart
-    }
-
-    var highlightMaskEnd: Double {
-        DarkroomCoreLightMath.highlightMaskEnd
+    var kernelParameters: [Float] {
+        DarkroomCoreLightMath.kernelParameters(for: self)
     }
 }

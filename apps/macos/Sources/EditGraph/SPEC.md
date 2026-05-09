@@ -8,12 +8,12 @@
 
 - Foundation value types.
 - SwiftUI only for lightweight bindings in the session model.
-- The linked `darkroom_core` C ABI for V1 light-control parameter math.
+- The linked `darkroom_core` C ABI for V1 tonal parameter math.
 - `docs/edit-graph.md` for operation ordering and persistence intent.
 
 ## Affords
 
-- A small V1 light recipe: exposure, contrast, highlights, and shadows.
+- A V1 tone recipe: exposure, contrast, pivot, highlights, shadows, whites, and blacks.
 - Per-file edit state that loads from and saves to DarkRoom XMP sidecars beside source images.
 - One value schema that inspector controls, preview rendering, and export rendering can share.
 
@@ -21,6 +21,7 @@
 
 - Keep edit values independent from UI controls.
 - Keep V1 slider ranges and neutral defaults centralized.
+- Keep the named V1 curve model beside the recipe values so future tone-curve versions can preserve old edits.
 - Provide recipe lookup that caches current-session values immediately while coalescing sidecar writes off the live adjustment path.
 - Keep sidecar persistence text-based, versioned, and owned by the recipe layer.
 
@@ -33,4 +34,4 @@
 
 ## Update Triggers
 
-Update when edit parameters, default values, operation ordering, persistence ownership, or recipe versioning changes.
+Update when edit parameters, curve model names, default values, operation ordering, persistence ownership, or recipe versioning changes.

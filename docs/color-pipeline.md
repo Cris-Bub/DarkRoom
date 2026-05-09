@@ -4,7 +4,7 @@ DarkRoom should be scene-referred and wide-gamut internally, with output proofin
 
 ## Starting Position
 
-The first implemented code is CPU reference math for exposure, pivoted contrast, and V1 light-control parameter mapping in `darkroom_core`. These functions are intentionally simple and testable. They establish the pattern for future color work: define behavior, write a CPU reference, then allow GPU paths to match it.
+The first implemented code is CPU reference math for exposure and the seven-control `darkroom_tonal_curve_v1` parameter mapping in `darkroom_core`. These functions are intentionally simple and testable. They establish the pattern for future color work: define behavior, write a CPU reference, then allow GPU paths to match it.
 
 ## Intended Pipeline
 
@@ -30,10 +30,10 @@ The first viewer and export implementations now share `ImagePipeline/` instead o
 
 - RAW files are routed through the `RawDecoder` protocol. V1 ships `AppleRawDecoder`, backed by Apple's `CIRAWFilter`, with draft mode off, lens correction enabled when supported, gamut mapping enabled, and extended dynamic range output disabled for the current SDR viewer baseline.
 - Raster files are decoded through Image I/O, preserving source color tags where available and treating untagged raster input as sRGB.
-- Core Image renders through Linear ROMM RGB, applies the V1 light recipe using Rust-derived parameter math, then proof-converts to the selected preview/export target.
+- Core Image renders through Linear ROMM RGB, applies the V1 tonal recipe using Rust-derived parameter math, then proof-converts to the selected preview/export target.
 - Viewer preview renders through a Metal-backed Core Image surface sized to the current viewer bounds and adds one final display conversion into the current window/display color space. During active slider drags, the viewer uses a lower-resolution interactive working image and then renders the normal viewer-resolution preview when the drag ends.
 - Interactive viewer updates reuse prepared source data and render directly into the Metal drawable so slider drags do not queue stale AppKit image replacements.
-- Inspector histograms render a bounded analysis image from source plus recipe through the same edit and preview-target proofing path, but stop before the viewer-only display-profile conversion. During slider drags, the histogram skips Core Image entirely: it caches a small neutral RGBA8 buffer once per file/preview-target and runs the V1 light recipe plus binning in a single Rust C ABI call. When dragging ends, the canonical pipeline render+bin path runs to refresh the histogram at the settled analysis size and color path.
+- Inspector histograms render a bounded analysis image from source plus recipe through the same edit and preview-target proofing path, but stop before the viewer-only display-profile conversion. During slider drags, the histogram skips Core Image entirely: it caches a small neutral RGBA8 buffer once per file/preview-target and runs the V1 tonal recipe plus binning in a single Rust C ABI call. When dragging ends, the canonical pipeline render+bin path runs to refresh the histogram at the settled analysis size and color path.
 - Export stops at the selected output target and writes JPEG, PNG, or TIFF through Image I/O with the rendered output color space.
 - The viewer observes window display/backing color-space changes and invalidates the preview cache when the app moves between displays or the display profile changes.
 - The rendered viewer image is display-referred preview data only. It must not become the export source or the persistent edit representation.
@@ -43,12 +43,13 @@ This is display-management accuracy, not Lightroom visual matching. Lightroom/Ca
 ## Early Rules
 
 - Exposure is a scene-linear stop control: `output = input * 2^EV`.
-- Contrast is pivoted around middle gray, initially `0.18`.
-- Highlights and shadows should behave like bounded tone-shaping controls, not independent high/low gain multipliers. Extreme settings must preserve tone ordering, avoid dragging highlights below middle gray, and avoid lifting true black into muddy gray.
+- The V1 tonal model computes Linear ROMM RGB luminance, maps it in log2 stops around middle gray `0.18`, then applies the resulting luminance gain back to RGB to preserve hue better than per-channel contrast.
+- Contrast and Pivot are one curve pair: contrast controls midtone separation, while pivot moves the EV center of that contrast response.
+- Highlights and shadows should behave like bounded broad-zone tone controls, not independent high/low gain multipliers. Whites and blacks should control endpoint energy/density without hard clipping in normal use. Extreme settings must preserve tone ordering.
 - Display transforms are separate from edit operations.
 - RAW white balance should eventually happen at RAW stage when RAW data is available.
 - Viewer readiness should gate edit controls; users should not be able to move grading controls when the selected image has not decoded into the current display preview.
-- The histogram should update with current light edits and `View As` target, including shadow/highlight clipping indicators derived from the proofed analysis image. It should preserve the previous graph while a newer slider position is rendering instead of flashing into a loading state.
+- The histogram should update with current tonal edits and `View As` target, including shadow/highlight clipping indicators derived from the proofed analysis image. It should preserve the previous graph while a newer slider position is rendering instead of flashing into a loading state.
 - Export must re-render from source plus edit recipe. It must not write cached viewer pixels.
 - Exports must carry their output color profile; silent untagged export is a bug.
 - V1 export target equals the current `View As` target until a dedicated export dialog/preset system exists.

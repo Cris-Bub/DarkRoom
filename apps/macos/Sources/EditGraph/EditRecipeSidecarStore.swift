@@ -74,11 +74,15 @@ private enum DarkRoomXMPRecipeCoder {
                 xmp:CreatorTool="DarkRoom"
                 xmp:MetadataDate="\(escapeAttribute(now))"
                 dr:RecipeVersion="1"
+                dr:ToneCurveModel="\(LightAdjustments.curveModel)"
                 dr:SourceFileName="\(escapeAttribute(sourceURL.lastPathComponent))"
                 dr:ExposureEV="\(format(light.exposureEV))"
                 dr:Contrast="\(format(light.contrast))"
+                dr:PivotEV="\(format(light.pivotEV))"
                 dr:Highlights="\(format(light.highlights))"
-                dr:Shadows="\(format(light.shadows))" />
+                dr:Shadows="\(format(light.shadows))"
+                dr:Whites="\(format(light.whites))"
+                dr:Blacks="\(format(light.blacks))" />
           </rdf:RDF>
         </x:xmpmeta>
         <?xpacket end="w"?>
@@ -102,11 +106,19 @@ private enum DarkRoomXMPRecipeCoder {
             throw EditRecipeSidecarError.invalidXMP(sidecarURL.lastPathComponent)
         }
 
+        if let curveModel = value(named: "ToneCurveModel", in: attributes),
+           curveModel != LightAdjustments.curveModel {
+            throw EditRecipeSidecarError.invalidXMP(sidecarURL.lastPathComponent)
+        }
+
         var recipe = EditRecipe.neutral
         recipe.light.exposureEV = try doubleValue(named: "ExposureEV", in: attributes, sidecarURL: sidecarURL)
         recipe.light.contrast = try doubleValue(named: "Contrast", in: attributes, sidecarURL: sidecarURL)
+        recipe.light.pivotEV = try optionalDoubleValue(named: "PivotEV", in: attributes, sidecarURL: sidecarURL) ?? 0
         recipe.light.highlights = try doubleValue(named: "Highlights", in: attributes, sidecarURL: sidecarURL)
         recipe.light.shadows = try doubleValue(named: "Shadows", in: attributes, sidecarURL: sidecarURL)
+        recipe.light.whites = try optionalDoubleValue(named: "Whites", in: attributes, sidecarURL: sidecarURL) ?? 0
+        recipe.light.blacks = try optionalDoubleValue(named: "Blacks", in: attributes, sidecarURL: sidecarURL) ?? 0
 
         return recipe
     }
@@ -118,6 +130,22 @@ private enum DarkRoomXMPRecipeCoder {
     ) throws -> Double {
         guard let rawValue = value(named: name, in: attributes),
               let value = Double(rawValue) else {
+            throw EditRecipeSidecarError.invalidXMP(sidecarURL.lastPathComponent)
+        }
+
+        return value
+    }
+
+    private static func optionalDoubleValue(
+        named name: String,
+        in attributes: [String: String],
+        sidecarURL: URL
+    ) throws -> Double? {
+        guard let rawValue = value(named: name, in: attributes) else {
+            return nil
+        }
+
+        guard let value = Double(rawValue) else {
             throw EditRecipeSidecarError.invalidXMP(sidecarURL.lastPathComponent)
         }
 

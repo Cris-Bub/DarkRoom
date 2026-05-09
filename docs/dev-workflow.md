@@ -44,7 +44,7 @@ Do not manually restructure the project inside Xcode. Update source-controlled p
 
 The preferred project generator is Tuist. XcodeGen is the fallback. If neither is installed, Rust tests and docs can still move forward, but the native app workspace cannot be generated yet.
 
-Swift build/test scripts call `scripts/build-rust-core.sh` before invoking Xcode because the macOS app links the `darkroom_core` static library for V1 light-control math.
+Swift build/test scripts call `scripts/build-rust-core.sh` before invoking Xcode because the macOS app links the `darkroom_core` static library for V1 tonal math.
 
 Scripts source `scripts/env.sh`, which points `DEVELOPER_DIR` at `/Applications/Xcode.app/Contents/Developer` when full Xcode is installed. To make that the machine-wide default outside this repo, run:
 

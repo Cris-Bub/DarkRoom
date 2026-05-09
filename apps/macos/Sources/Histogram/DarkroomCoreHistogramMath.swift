@@ -70,22 +70,7 @@ enum DarkroomCoreHistogramMath {
         var shadowClippedPixelCount: UInt32 = 0
         var highlightClippedPixelCount: UInt32 = 0
 
-        let parameterFloats: [Float] = [
-            Float(light.exposureGain),
-            Float(light.contrastExponent),
-            Float(LightAdjustments.contrastPivot),
-            Float(light.normalizedHighlights),
-            Float(light.normalizedShadows),
-            Float(light.shadowLiftLimit),
-            Float(light.shadowDropLimit),
-            Float(light.highlightPullLimit),
-            Float(light.highlightBoostLimit),
-            Float(light.shadowMaskStart),
-            Float(light.shadowMaskEnd),
-            Float(light.shadowBlackAnchorEnd),
-            Float(light.highlightMaskStart),
-            Float(light.highlightMaskEnd)
-        ]
+        let parameterFloats = light.kernelParameters
 
         let result = rgbaPixels.withUnsafeBufferPointer { pixels in
             parameterFloats.withUnsafeBufferPointer { parameters in

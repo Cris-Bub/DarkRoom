@@ -5,6 +5,7 @@ struct DRAdjustmentRow: View {
     @Binding var value: Double
     let range: ClosedRange<Double>
     let displayValue: String
+    var helpText: String?
     var onEditingChanged: (Bool) -> Void = { _ in }
 
     var body: some View {
@@ -27,5 +28,6 @@ struct DRAdjustmentRow: View {
                 onEditingChanged: onEditingChanged
             )
         }
+        .help(helpText ?? title)
     }
 }

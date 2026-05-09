@@ -112,8 +112,12 @@ final class ViewerImageRendererTests: XCTestCase {
             displayName: "Test Display"
         )
         var recipe = EditRecipe.neutral
+        recipe.light.contrast = 100
+        recipe.light.pivotEV = -2
         recipe.light.shadows = 100
         recipe.light.highlights = -100
+        recipe.light.whites = -100
+        recipe.light.blacks = -100
 
         let renderedImage = try ViewerImageRenderer.render(
             url: url,

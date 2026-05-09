@@ -11,6 +11,7 @@ DarkRoom now has the early V1 shell plus the first color-managed edit/export pat
 - Native SwiftUI/AppKit macOS shell source under `apps/macos`
 - Rust workspace with a first `darkroom_core` crate under `crates`
 - Local image browsing, color-managed viewing, and persisted light edits
+- A seven-control V1 tonal model with Exposure, Contrast, Pivot, Highlights, Shadows, Whites, and Blacks
 - Live DarkRoom XMP sidecars for non-neutral edit recipes
 - JPEG, PNG, and TIFF export rendered from source plus recipe
 - Cursor-first script entrypoints under `scripts`
@@ -81,7 +82,7 @@ SwiftUI design-system code lives under `apps/macos/Sources/DesignSystem`. Prefer
 
 ### Milestone 1: Non-Destructive Edit Graph Prototype
 
-- Add exposure, contrast, highlights, and shadows controls.
+- Add exposure, contrast, pivot, highlights, shadows, whites, and blacks controls.
 - Store edits as non-destructive recipe data.
 - Persist non-neutral edits into sidecars beside source images.
 - Keep originals untouched.

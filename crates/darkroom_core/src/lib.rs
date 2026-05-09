@@ -1,13 +1,27 @@
-pub const DEFAULT_CONTRAST_PIVOT: f32 = 0.18;
-pub const SHADOW_MASK_START: f32 = 0.03;
-pub const SHADOW_MASK_END: f32 = 0.36;
-pub const SHADOW_BLACK_ANCHOR_END: f32 = 0.045;
-pub const HIGHLIGHT_MASK_START: f32 = 0.26;
-pub const HIGHLIGHT_MASK_END: f32 = 0.85;
-pub const SHADOW_LIFT_LIMIT: f32 = 0.58;
-pub const SHADOW_DROP_LIMIT: f32 = 0.50;
-pub const HIGHLIGHT_PULL_LIMIT: f32 = 0.50;
-pub const HIGHLIGHT_BOOST_LIMIT: f32 = 0.35;
+pub const DARKROOM_TONAL_CURVE_V1: &str = "darkroom_tonal_curve_v1";
+pub const DEFAULT_CONTRAST_PIVOT: f32 = MIDDLE_GRAY;
+pub const MIDDLE_GRAY: f32 = 0.18;
+pub const TONE_EPSILON: f32 = 1.0e-6;
+pub const LIGHT_KERNEL_PARAMETER_COUNT: usize = 23;
+
+const LUMA_RED: f32 = 0.288_040_2;
+const LUMA_GREEN: f32 = 0.711_874_1;
+const LUMA_BLUE: f32 = 0.000_085_7;
+
+const CONTRAST_MAX_EV: f32 = 1.35;
+const CONTRAST_ROLLOFF_EV: f32 = 2.0;
+const HIGHLIGHT_SHADOW_MAX_EV: f32 = 1.8;
+const ENDPOINT_MAX_EV: f32 = 2.0;
+const SHADOW_ZONE_START_EV: f32 = 0.5;
+const SHADOW_ZONE_FULL_EV: f32 = 4.0;
+const HIGHLIGHT_ZONE_START_EV: f32 = 0.5;
+const HIGHLIGHT_ZONE_FULL_EV: f32 = 4.0;
+const BLACK_ZONE_START_EV: f32 = 1.0;
+const BLACK_ZONE_FULL_EV: f32 = 5.0;
+const WHITE_ZONE_START_EV: f32 = 1.0;
+const WHITE_ZONE_FULL_EV: f32 = 5.0;
+const PIVOT_EV_MIN: f32 = -2.0;
+const PIVOT_EV_MAX: f32 = 2.0;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Exposure {
@@ -28,29 +42,35 @@ impl Exposure {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Contrast {
-    pub amount: f32,
-    pub pivot: f32,
+    pub strength: f32,
+    pub pivot_ev: f32,
 }
 
 impl Default for Contrast {
     fn default() -> Self {
         Self {
-            amount: 1.0,
-            pivot: DEFAULT_CONTRAST_PIVOT,
+            strength: 0.0,
+            pivot_ev: 0.0,
         }
     }
 }
 
 impl Contrast {
-    pub fn from_slider(slider: f32) -> Self {
+    pub fn from_slider(slider: f32, pivot_ev: f32) -> Self {
         Self {
-            amount: contrast_slider_to_exponent(slider),
-            pivot: DEFAULT_CONTRAST_PIVOT,
+            strength: contrast_slider_to_strength(slider),
+            pivot_ev: sanitize_pivot_ev(pivot_ev),
         }
     }
 
     pub fn apply(self, scene_linear: f32) -> f32 {
-        apply_pivoted_contrast_scene_linear(scene_linear, self.amount, self.pivot)
+        let parameters = LightKernelParameters {
+            contrast_strength: self.strength,
+            pivot_ev: self.pivot_ev,
+            ..LightKernelParameters::default()
+        };
+
+        apply_darkroom_tonal_curve_v1_luma(scene_linear, parameters)
     }
 }
 
@@ -58,8 +78,11 @@ impl Contrast {
 pub struct LightRecipe {
     pub exposure_ev: f32,
     pub contrast_slider: f32,
+    pub pivot_ev: f32,
     pub highlights_slider: f32,
     pub shadows_slider: f32,
+    pub whites_slider: f32,
+    pub blacks_slider: f32,
 }
 
 impl Default for LightRecipe {
@@ -67,8 +90,11 @@ impl Default for LightRecipe {
         Self {
             exposure_ev: 0.0,
             contrast_slider: 0.0,
+            pivot_ev: 0.0,
             highlights_slider: 0.0,
             shadows_slider: 0.0,
+            whites_slider: 0.0,
+            blacks_slider: 0.0,
         }
     }
 }
@@ -77,25 +103,33 @@ impl LightRecipe {
     pub fn kernel_parameters(self) -> LightKernelParameters {
         LightKernelParameters {
             exposure_gain: exposure_ev_to_gain(self.exposure_ev),
-            contrast_exponent: contrast_slider_to_exponent(self.contrast_slider),
-            contrast_pivot: DEFAULT_CONTRAST_PIVOT,
-            highlights: normalize_adjustment_slider(self.highlights_slider),
-            shadows: normalize_adjustment_slider(self.shadows_slider),
-            shadow_lift_limit: SHADOW_LIFT_LIMIT,
-            shadow_drop_limit: SHADOW_DROP_LIMIT,
-            highlight_pull_limit: HIGHLIGHT_PULL_LIMIT,
-            highlight_boost_limit: HIGHLIGHT_BOOST_LIMIT,
-            shadow_mask_start: SHADOW_MASK_START,
-            shadow_mask_end: SHADOW_MASK_END,
-            shadow_black_anchor_end: SHADOW_BLACK_ANCHOR_END,
-            highlight_mask_start: HIGHLIGHT_MASK_START,
-            highlight_mask_end: HIGHLIGHT_MASK_END,
+            contrast_strength: contrast_slider_to_strength(self.contrast_slider),
+            pivot_ev: sanitize_pivot_ev(self.pivot_ev),
+            highlights_ev: tonal_region_slider_to_ev(self.highlights_slider),
+            shadows_ev: tonal_region_slider_to_ev(self.shadows_slider),
+            whites_ev: endpoint_slider_to_ev(self.whites_slider),
+            blacks_ev: endpoint_slider_to_ev(self.blacks_slider),
+            middle_gray: MIDDLE_GRAY,
+            tone_epsilon: TONE_EPSILON,
+            luma_red: LUMA_RED,
+            luma_green: LUMA_GREEN,
+            luma_blue: LUMA_BLUE,
+            contrast_max_ev: CONTRAST_MAX_EV,
+            contrast_rolloff_ev: CONTRAST_ROLLOFF_EV,
+            shadow_zone_start_ev: SHADOW_ZONE_START_EV,
+            shadow_zone_full_ev: SHADOW_ZONE_FULL_EV,
+            highlight_zone_start_ev: HIGHLIGHT_ZONE_START_EV,
+            highlight_zone_full_ev: HIGHLIGHT_ZONE_FULL_EV,
+            black_zone_start_ev: BLACK_ZONE_START_EV,
+            black_zone_full_ev: BLACK_ZONE_FULL_EV,
+            white_zone_start_ev: WHITE_ZONE_START_EV,
+            white_zone_full_ev: WHITE_ZONE_FULL_EV,
+            endpoint_max_ev: ENDPOINT_MAX_EV,
         }
     }
 
     pub fn apply_luma_reference(self, scene_linear: f32) -> f32 {
-        let parameters = self.kernel_parameters();
-        apply_light_luma_reference(scene_linear, parameters)
+        apply_light_luma_reference(scene_linear, self.kernel_parameters())
     }
 }
 
@@ -103,24 +137,95 @@ impl LightRecipe {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct LightKernelParameters {
     pub exposure_gain: f32,
-    pub contrast_exponent: f32,
-    pub contrast_pivot: f32,
-    pub highlights: f32,
-    pub shadows: f32,
-    pub shadow_lift_limit: f32,
-    pub shadow_drop_limit: f32,
-    pub highlight_pull_limit: f32,
-    pub highlight_boost_limit: f32,
-    pub shadow_mask_start: f32,
-    pub shadow_mask_end: f32,
-    pub shadow_black_anchor_end: f32,
-    pub highlight_mask_start: f32,
-    pub highlight_mask_end: f32,
+    pub contrast_strength: f32,
+    pub pivot_ev: f32,
+    pub highlights_ev: f32,
+    pub shadows_ev: f32,
+    pub whites_ev: f32,
+    pub blacks_ev: f32,
+    pub middle_gray: f32,
+    pub tone_epsilon: f32,
+    pub luma_red: f32,
+    pub luma_green: f32,
+    pub luma_blue: f32,
+    pub contrast_max_ev: f32,
+    pub contrast_rolloff_ev: f32,
+    pub shadow_zone_start_ev: f32,
+    pub shadow_zone_full_ev: f32,
+    pub highlight_zone_start_ev: f32,
+    pub highlight_zone_full_ev: f32,
+    pub black_zone_start_ev: f32,
+    pub black_zone_full_ev: f32,
+    pub white_zone_start_ev: f32,
+    pub white_zone_full_ev: f32,
+    pub endpoint_max_ev: f32,
 }
 
 impl Default for LightKernelParameters {
     fn default() -> Self {
         LightRecipe::default().kernel_parameters()
+    }
+}
+
+impl LightKernelParameters {
+    pub fn to_floats(self) -> [f32; LIGHT_KERNEL_PARAMETER_COUNT] {
+        [
+            self.exposure_gain,
+            self.contrast_strength,
+            self.pivot_ev,
+            self.highlights_ev,
+            self.shadows_ev,
+            self.whites_ev,
+            self.blacks_ev,
+            self.middle_gray,
+            self.tone_epsilon,
+            self.luma_red,
+            self.luma_green,
+            self.luma_blue,
+            self.contrast_max_ev,
+            self.contrast_rolloff_ev,
+            self.shadow_zone_start_ev,
+            self.shadow_zone_full_ev,
+            self.highlight_zone_start_ev,
+            self.highlight_zone_full_ev,
+            self.black_zone_start_ev,
+            self.black_zone_full_ev,
+            self.white_zone_start_ev,
+            self.white_zone_full_ev,
+            self.endpoint_max_ev,
+        ]
+    }
+
+    fn from_floats(parameters: &[f32]) -> Option<Self> {
+        if parameters.len() < LIGHT_KERNEL_PARAMETER_COUNT {
+            return None;
+        }
+
+        Some(Self {
+            exposure_gain: parameters[0],
+            contrast_strength: parameters[1],
+            pivot_ev: parameters[2],
+            highlights_ev: parameters[3],
+            shadows_ev: parameters[4],
+            whites_ev: parameters[5],
+            blacks_ev: parameters[6],
+            middle_gray: parameters[7],
+            tone_epsilon: parameters[8],
+            luma_red: parameters[9],
+            luma_green: parameters[10],
+            luma_blue: parameters[11],
+            contrast_max_ev: parameters[12],
+            contrast_rolloff_ev: parameters[13],
+            shadow_zone_start_ev: parameters[14],
+            shadow_zone_full_ev: parameters[15],
+            highlight_zone_start_ev: parameters[16],
+            highlight_zone_full_ev: parameters[17],
+            black_zone_start_ev: parameters[18],
+            black_zone_full_ev: parameters[19],
+            white_zone_start_ev: parameters[20],
+            white_zone_full_ev: parameters[21],
+            endpoint_max_ev: parameters[22],
+        })
     }
 }
 
@@ -143,6 +248,10 @@ pub fn exposure_ev_to_gain(ev: f32) -> f32 {
     2.0_f32.powf(ev)
 }
 
+pub fn contrast_slider_to_strength(slider: f32) -> f32 {
+    signed_smooth_unit(slider)
+}
+
 pub fn contrast_slider_to_exponent(slider: f32) -> f32 {
     if !slider.is_finite() {
         return 1.0;
@@ -152,11 +261,15 @@ pub fn contrast_slider_to_exponent(slider: f32) -> f32 {
 }
 
 pub fn normalize_adjustment_slider(slider: f32) -> f32 {
-    if !slider.is_finite() {
-        return 0.0;
-    }
+    signed_smooth_unit(slider)
+}
 
-    slider / 100.0
+pub fn tonal_region_slider_to_ev(slider: f32) -> f32 {
+    signed_smooth_unit(slider) * HIGHLIGHT_SHADOW_MAX_EV
+}
+
+pub fn endpoint_slider_to_ev(slider: f32) -> f32 {
+    signed_smooth_unit(slider) * ENDPOINT_MAX_EV
 }
 
 pub fn apply_exposure_scene_linear(input: f32, ev: f32) -> f32 {
@@ -184,14 +297,8 @@ pub fn apply_light_luma_reference(input: f32, parameters: LightKernelParameters)
         return input;
     }
 
-    let exposed = input * parameters.exposure_gain;
-    let contrasted = apply_pivoted_contrast_scene_linear(
-        exposed,
-        parameters.contrast_exponent,
-        parameters.contrast_pivot,
-    );
-
-    apply_tonal_recovery_luma(contrasted, parameters)
+    let exposed = (input * parameters.exposure_gain).max(0.0);
+    apply_darkroom_tonal_curve_v1_luma(exposed, parameters)
 }
 
 pub fn apply_light_rgb_kernel(
@@ -200,91 +307,90 @@ pub fn apply_light_rgb_kernel(
     blue: f32,
     parameters: LightKernelParameters,
 ) -> (f32, f32, f32) {
-    let r1 = (red * parameters.exposure_gain).max(0.0);
-    let g1 = (green * parameters.exposure_gain).max(0.0);
-    let b1 = (blue * parameters.exposure_gain).max(0.0);
+    let r = (red * parameters.exposure_gain).max(0.0);
+    let g = (green * parameters.exposure_gain).max(0.0);
+    let b = (blue * parameters.exposure_gain).max(0.0);
+    let luma = working_luminance(r, g, b, parameters);
+    let target_luma = apply_darkroom_tonal_curve_v1_luma(luma, parameters);
+    let ratio = (target_luma / luma.max(parameters.tone_epsilon)).max(0.0);
 
-    let r2 = apply_pivoted_contrast_per_channel(
-        r1,
-        parameters.contrast_exponent,
-        parameters.contrast_pivot,
-    );
-    let g2 = apply_pivoted_contrast_per_channel(
-        g1,
-        parameters.contrast_exponent,
-        parameters.contrast_pivot,
-    );
-    let b2 = apply_pivoted_contrast_per_channel(
-        b1,
-        parameters.contrast_exponent,
-        parameters.contrast_pivot,
-    );
-
-    let luma = 0.2126 * r2 + 0.7152 * g2 + 0.0722 * b2;
-    let target_luma = apply_tonal_recovery_luma(luma, parameters);
-    let ratio = (target_luma / luma.max(1e-6)).max(0.0);
-
-    (r2 * ratio, g2 * ratio, b2 * ratio)
+    (r * ratio, g * ratio, b * ratio)
 }
 
-fn apply_pivoted_contrast_per_channel(input: f32, contrast: f32, pivot: f32) -> f32 {
-    if !input.is_finite() || !contrast.is_finite() || !pivot.is_finite() {
-        return input;
-    }
-
-    if pivot <= 0.0 || contrast <= 0.0 {
-        return input;
-    }
-
-    if input <= 0.0 {
-        return 0.0;
-    }
-
-    pivot * (input / pivot).powf(contrast)
-}
-
-pub fn apply_tonal_recovery_luma(input: f32, parameters: LightKernelParameters) -> f32 {
+pub fn apply_darkroom_tonal_curve_v1_luma(input: f32, parameters: LightKernelParameters) -> f32 {
     if !input.is_finite() || input <= 0.0 {
         return input;
     }
 
-    let shadow_mask = 1.0
-        - smoothstep(
-            parameters.shadow_mask_start,
-            parameters.shadow_mask_end,
-            input,
+    let middle_gray = parameters.middle_gray.max(parameters.tone_epsilon);
+    let safe_luma = input.max(parameters.tone_epsilon);
+    let z = (safe_luma / middle_gray).log2();
+    let shaped_z = apply_darkroom_tonal_curve_v1_z(z, parameters);
+
+    middle_gray * 2.0_f32.powf(shaped_z).max(0.0)
+}
+
+pub fn apply_darkroom_tonal_curve_v1_z(input_z: f32, parameters: LightKernelParameters) -> f32 {
+    if !input_z.is_finite() {
+        return input_z;
+    }
+
+    let mut z = input_z;
+
+    z += parameters.shadows_ev
+        * smoothstep(
+            parameters.shadow_zone_start_ev,
+            parameters.shadow_zone_full_ev,
+            -z,
         );
-    let shadow_lift_mask = shadow_mask * smoothstep(0.0, parameters.shadow_black_anchor_end, input);
-    let highlight_mask = smoothstep(
-        parameters.highlight_mask_start,
-        parameters.highlight_mask_end,
-        input,
-    );
+    z += parameters.highlights_ev
+        * smoothstep(
+            parameters.highlight_zone_start_ev,
+            parameters.highlight_zone_full_ev,
+            z,
+        );
+    z += parameters.blacks_ev
+        * smoothstep(
+            parameters.black_zone_start_ev,
+            parameters.black_zone_full_ev,
+            -z,
+        );
+    z += parameters.whites_ev
+        * smoothstep(
+            parameters.white_zone_start_ev,
+            parameters.white_zone_full_ev,
+            z,
+        );
 
-    let mut output = input;
+    let centered = z - parameters.pivot_ev;
+    let rolloff = parameters.contrast_rolloff_ev.max(0.001);
+    let contrast_curve = softsign(centered / rolloff);
+    z += parameters.contrast_strength * parameters.contrast_max_ev * contrast_curve;
 
-    if parameters.shadows >= 0.0 {
-        let distance_to_pivot = (parameters.contrast_pivot - output).max(0.0);
-        output += distance_to_pivot
-            * parameters.shadows
-            * parameters.shadow_lift_limit
-            * shadow_lift_mask;
-    } else {
-        let darken = (-parameters.shadows) * parameters.shadow_drop_limit * shadow_mask;
-        output *= (1.0 - darken).max(0.0);
+    z
+}
+
+fn working_luminance(red: f32, green: f32, blue: f32, parameters: LightKernelParameters) -> f32 {
+    red * parameters.luma_red + green * parameters.luma_green + blue * parameters.luma_blue
+}
+
+fn sanitize_pivot_ev(pivot_ev: f32) -> f32 {
+    if !pivot_ev.is_finite() {
+        return 0.0;
     }
 
-    if parameters.highlights >= 0.0 {
-        output *= 1.0 + parameters.highlights * parameters.highlight_boost_limit * highlight_mask;
-    } else {
-        let distance_from_pivot = (output - parameters.contrast_pivot).max(0.0);
-        output -= distance_from_pivot
-            * (-parameters.highlights)
-            * parameters.highlight_pull_limit
-            * highlight_mask;
+    pivot_ev.clamp(PIVOT_EV_MIN, PIVOT_EV_MAX)
+}
+
+fn signed_smooth_unit(slider: f32) -> f32 {
+    if !slider.is_finite() {
+        return 0.0;
     }
 
-    output.max(0.0)
+    let normalized = (slider / 100.0).clamp(-1.0, 1.0);
+    let magnitude = normalized.abs();
+    let smoothed = magnitude * magnitude * (3.0 - 2.0 * magnitude);
+    normalized.signum() * smoothed
 }
 
 fn smoothstep(edge0: f32, edge1: f32, value: f32) -> f32 {
@@ -294,6 +400,10 @@ fn smoothstep(edge0: f32, edge1: f32, value: f32) -> f32 {
 
     let t = ((value - edge0) / (edge1 - edge0)).clamp(0.0, 1.0);
     t * t * (3.0 - 2.0 * t)
+}
+
+fn softsign(value: f32) -> f32 {
+    value / (1.0 + value.abs())
 }
 
 #[no_mangle]
@@ -317,48 +427,40 @@ pub extern "C" fn darkroom_light_normalized_slider(slider: f32) -> f32 {
 }
 
 #[no_mangle]
-pub extern "C" fn darkroom_light_shadow_lift_limit() -> f32 {
-    SHADOW_LIFT_LIMIT
+pub extern "C" fn darkroom_light_kernel_parameter_count() -> usize {
+    LIGHT_KERNEL_PARAMETER_COUNT
 }
 
 #[no_mangle]
-pub extern "C" fn darkroom_light_shadow_drop_limit() -> f32 {
-    SHADOW_DROP_LIMIT
-}
+pub unsafe extern "C" fn darkroom_light_kernel_parameters(
+    exposure_ev: f32,
+    contrast_slider: f32,
+    pivot_ev: f32,
+    highlights_slider: f32,
+    shadows_slider: f32,
+    whites_slider: f32,
+    blacks_slider: f32,
+    output_parameters: *mut f32,
+    output_parameter_count: usize,
+) -> u8 {
+    if output_parameters.is_null() || output_parameter_count < LIGHT_KERNEL_PARAMETER_COUNT {
+        return 0;
+    }
 
-#[no_mangle]
-pub extern "C" fn darkroom_light_highlight_pull_limit() -> f32 {
-    HIGHLIGHT_PULL_LIMIT
-}
+    let recipe = LightRecipe {
+        exposure_ev,
+        contrast_slider,
+        pivot_ev,
+        highlights_slider,
+        shadows_slider,
+        whites_slider,
+        blacks_slider,
+    };
+    let parameters = recipe.kernel_parameters().to_floats();
+    let output = std::slice::from_raw_parts_mut(output_parameters, output_parameter_count);
+    output[..LIGHT_KERNEL_PARAMETER_COUNT].copy_from_slice(&parameters);
 
-#[no_mangle]
-pub extern "C" fn darkroom_light_highlight_boost_limit() -> f32 {
-    HIGHLIGHT_BOOST_LIMIT
-}
-
-#[no_mangle]
-pub extern "C" fn darkroom_light_shadow_mask_start() -> f32 {
-    SHADOW_MASK_START
-}
-
-#[no_mangle]
-pub extern "C" fn darkroom_light_shadow_mask_end() -> f32 {
-    SHADOW_MASK_END
-}
-
-#[no_mangle]
-pub extern "C" fn darkroom_light_shadow_black_anchor_end() -> f32 {
-    SHADOW_BLACK_ANCHOR_END
-}
-
-#[no_mangle]
-pub extern "C" fn darkroom_light_highlight_mask_start() -> f32 {
-    HIGHLIGHT_MASK_START
-}
-
-#[no_mangle]
-pub extern "C" fn darkroom_light_highlight_mask_end() -> f32 {
-    HIGHLIGHT_MASK_END
+    1
 }
 
 #[no_mangle]
@@ -463,22 +565,10 @@ pub unsafe extern "C" fn darkroom_histogram_apply_recipe_rgba8(
         return 0;
     }
 
-    let parameters_slice = std::slice::from_raw_parts(parameters_floats, 14);
-    let parameters = LightKernelParameters {
-        exposure_gain: parameters_slice[0],
-        contrast_exponent: parameters_slice[1],
-        contrast_pivot: parameters_slice[2],
-        highlights: parameters_slice[3],
-        shadows: parameters_slice[4],
-        shadow_lift_limit: parameters_slice[5],
-        shadow_drop_limit: parameters_slice[6],
-        highlight_pull_limit: parameters_slice[7],
-        highlight_boost_limit: parameters_slice[8],
-        shadow_mask_start: parameters_slice[9],
-        shadow_mask_end: parameters_slice[10],
-        shadow_black_anchor_end: parameters_slice[11],
-        highlight_mask_start: parameters_slice[12],
-        highlight_mask_end: parameters_slice[13],
+    let parameters_slice =
+        std::slice::from_raw_parts(parameters_floats, LIGHT_KERNEL_PARAMETER_COUNT);
+    let Some(parameters) = LightKernelParameters::from_floats(parameters_slice) else {
+        return 0;
     };
 
     let pixels = std::slice::from_raw_parts(rgba_pixels, byte_len);
@@ -559,19 +649,17 @@ mod tests {
     }
 
     #[test]
-    fn contrast_one_is_identity() {
-        assert_close(apply_pivoted_contrast_scene_linear(0.36, 1.0, 0.18), 0.36);
-    }
-
-    #[test]
-    fn contrast_preserves_pivot() {
+    fn legacy_pivoted_contrast_reference_still_preserves_pivot() {
         assert_close(apply_pivoted_contrast_scene_linear(0.18, 2.0, 0.18), 0.18);
     }
 
     #[test]
-    fn contrast_expands_around_pivot() {
-        assert_close(apply_pivoted_contrast_scene_linear(0.36, 2.0, 0.18), 0.72);
-        assert_close(apply_pivoted_contrast_scene_linear(0.09, 2.0, 0.18), 0.045);
+    fn neutral_tonal_curve_is_luminance_identity() {
+        let parameters = LightRecipe::default().kernel_parameters();
+
+        for input in [0.01, 0.18, 0.72, 2.0] {
+            assert_close(apply_light_luma_reference(input, parameters), input);
+        }
     }
 
     #[test]
@@ -579,29 +667,56 @@ mod tests {
         let recipe = LightRecipe {
             exposure_ev: 1.0,
             contrast_slider: 100.0,
+            pivot_ev: 1.5,
             highlights_slider: -50.0,
             shadows_slider: 25.0,
+            whites_slider: 75.0,
+            blacks_slider: -25.0,
         };
         let parameters = recipe.kernel_parameters();
 
         assert_close(parameters.exposure_gain, 2.0);
-        assert_close(parameters.contrast_exponent, 2.0);
-        assert_close(parameters.contrast_pivot, DEFAULT_CONTRAST_PIVOT);
-        assert_close(parameters.highlights, -0.5);
-        assert_close(parameters.shadows, 0.25);
-        assert_close(parameters.shadow_lift_limit, SHADOW_LIFT_LIMIT);
-        assert_close(parameters.highlight_pull_limit, HIGHLIGHT_PULL_LIMIT);
-        assert_close(parameters.highlight_mask_start, HIGHLIGHT_MASK_START);
+        assert_close(parameters.contrast_strength, 1.0);
+        assert_close(parameters.pivot_ev, 1.5);
+        assert_close(parameters.highlights_ev, -0.9);
+        assert!(parameters.shadows_ev > 0.0);
+        assert!(parameters.whites_ev > 0.0);
+        assert!(parameters.blacks_ev < 0.0);
+        assert_close(parameters.middle_gray, MIDDLE_GRAY);
+        assert_eq!(parameters.to_floats().len(), LIGHT_KERNEL_PARAMETER_COUNT);
     }
 
     #[test]
-    fn light_recipe_applies_exposure_then_contrast() {
+    fn light_recipe_applies_exposure_as_real_stops() {
         let recipe = LightRecipe {
             exposure_ev: 1.0,
             ..Default::default()
         };
 
         assert_close(recipe.apply_luma_reference(0.18), 0.36);
+    }
+
+    #[test]
+    fn contrast_increases_tonal_separation_around_pivot() {
+        let high_contrast = LightRecipe {
+            contrast_slider: 100.0,
+            ..Default::default()
+        };
+        let neutral = LightRecipe::default();
+
+        assert!(high_contrast.apply_luma_reference(0.36) > neutral.apply_luma_reference(0.36));
+        assert!(high_contrast.apply_luma_reference(0.09) < neutral.apply_luma_reference(0.09));
+        assert_close(high_contrast.apply_luma_reference(MIDDLE_GRAY), MIDDLE_GRAY);
+    }
+
+    #[test]
+    fn pivot_changes_contrast_balance_without_moving_middle_gray_when_contrast_is_zero() {
+        let pivot_only = LightRecipe {
+            pivot_ev: 2.0,
+            ..Default::default()
+        };
+
+        assert_close(pivot_only.apply_luma_reference(MIDDLE_GRAY), MIDDLE_GRAY);
     }
 
     #[test]
@@ -612,22 +727,11 @@ mod tests {
         };
         let neutral = LightRecipe::default();
 
-        assert!(lift_shadows.apply_luma_reference(0.1) > neutral.apply_luma_reference(0.1));
-    }
-
-    #[test]
-    fn shadow_lift_preserves_black_and_stays_below_middle_gray() {
-        let parameters = LightRecipe {
-            shadows_slider: 100.0,
-            ..Default::default()
-        }
-        .kernel_parameters();
-
-        assert_close(apply_tonal_recovery_luma(0.0, parameters), 0.0);
-
-        let lifted_shadow = apply_tonal_recovery_luma(0.08, parameters);
-        assert!(lifted_shadow > 0.08);
-        assert!(lifted_shadow < DEFAULT_CONTRAST_PIVOT);
+        assert!(lift_shadows.apply_luma_reference(0.05) > neutral.apply_luma_reference(0.05));
+        assert_close(
+            lift_shadows.apply_luma_reference(0.72),
+            neutral.apply_luma_reference(0.72),
+        );
     }
 
     #[test]
@@ -639,34 +743,67 @@ mod tests {
         let neutral = LightRecipe::default();
 
         assert!(pull_highlights.apply_luma_reference(0.8) < neutral.apply_luma_reference(0.8));
+        assert_close(
+            pull_highlights.apply_luma_reference(0.05),
+            neutral.apply_luma_reference(0.05),
+        );
     }
 
     #[test]
-    fn highlight_recovery_does_not_pull_bright_tones_below_middle_gray() {
-        let parameters = LightRecipe {
-            highlights_slider: -100.0,
+    fn whites_and_blacks_target_endpoints_more_than_midtones() {
+        let brighter_whites = LightRecipe {
+            whites_slider: 100.0,
             ..Default::default()
-        }
-        .kernel_parameters();
+        };
+        let deeper_blacks = LightRecipe {
+            blacks_slider: -100.0,
+            ..Default::default()
+        };
+        let neutral = LightRecipe::default();
 
-        let recovered_highlight = apply_tonal_recovery_luma(1.0, parameters);
-        assert!(recovered_highlight < 1.0);
-        assert!(recovered_highlight > DEFAULT_CONTRAST_PIVOT);
+        let white_delta =
+            brighter_whites.apply_luma_reference(2.0) - neutral.apply_luma_reference(2.0);
+        let white_mid_delta =
+            brighter_whites.apply_luma_reference(0.18) - neutral.apply_luma_reference(0.18);
+        assert!(white_delta > white_mid_delta.abs());
+
+        let black_delta =
+            neutral.apply_luma_reference(0.02) - deeper_blacks.apply_luma_reference(0.02);
+        let black_mid_delta =
+            neutral.apply_luma_reference(0.18) - deeper_blacks.apply_luma_reference(0.18);
+        assert!(black_delta > black_mid_delta.abs());
     }
 
     #[test]
-    fn extreme_recovery_curve_remains_monotonic() {
+    fn rgb_tone_application_preserves_channel_ratios() {
+        let recipe = LightRecipe {
+            contrast_slider: 80.0,
+            whites_slider: 60.0,
+            ..Default::default()
+        };
+        let (r, g, b) = apply_light_rgb_kernel(0.4, 0.2, 0.1, recipe.kernel_parameters());
+
+        assert_close(r / g, 2.0);
+        assert_close(g / b, 2.0);
+    }
+
+    #[test]
+    fn extreme_tonal_curve_remains_monotonic() {
         let parameters = LightRecipe {
+            contrast_slider: 100.0,
+            pivot_ev: -2.0,
             highlights_slider: -100.0,
             shadows_slider: 100.0,
+            whites_slider: -100.0,
+            blacks_slider: -100.0,
             ..Default::default()
         }
         .kernel_parameters();
-        let mut previous = apply_tonal_recovery_luma(0.0, parameters);
+        let mut previous = apply_darkroom_tonal_curve_v1_z(-12.0, parameters);
 
-        for step in 1..=400 {
-            let input = step as f32 / 200.0;
-            let output = apply_tonal_recovery_luma(input, parameters);
+        for step in 1..=1200 {
+            let input = -12.0 + step as f32 * 0.02;
+            let output = apply_darkroom_tonal_curve_v1_z(input, parameters);
             assert!(
                 output + EPSILON >= previous,
                 "curve inverted at input {input}: {output} < {previous}"
@@ -676,12 +813,31 @@ mod tests {
     }
 
     #[test]
+    fn c_abi_fills_kernel_parameters() {
+        let mut floats = [0.0_f32; LIGHT_KERNEL_PARAMETER_COUNT];
+        let succeeded = unsafe {
+            darkroom_light_kernel_parameters(
+                1.0,
+                100.0,
+                -1.0,
+                -50.0,
+                25.0,
+                75.0,
+                -25.0,
+                floats.as_mut_ptr(),
+                floats.len(),
+            )
+        };
+
+        assert_eq!(succeeded, 1);
+        assert_close(floats[0], 2.0);
+        assert_close(floats[1], 1.0);
+        assert_close(floats[2], -1.0);
+    }
+
+    #[test]
     fn rgba_histogram_counts_channels_luma_and_clipping() {
-        let pixels = [
-            0_u8, 0, 0, 255,
-            255, 255, 255, 255,
-            255, 0, 0, 255,
-        ];
+        let pixels = [0_u8, 0, 0, 255, 255, 255, 255, 255, 255, 0, 0, 255];
         let mut red = [99_u32; 256];
         let mut green = [99_u32; 256];
         let mut blue = [99_u32; 256];
@@ -722,12 +878,12 @@ mod tests {
     #[test]
     fn rgba_apply_recipe_one_stop_doubles_brightness() {
         let pixels = [64_u8, 64, 64, 255];
-        let parameters = LightRecipe {
+        let parameters_floats = LightRecipe {
             exposure_ev: 1.0,
             ..Default::default()
         }
-        .kernel_parameters();
-        let parameters_floats = light_kernel_parameters_to_floats(parameters);
+        .kernel_parameters()
+        .to_floats();
         let mut red = [99_u32; 256];
         let mut green = [99_u32; 256];
         let mut blue = [99_u32; 256];
@@ -767,8 +923,7 @@ mod tests {
     #[test]
     fn rgba_apply_recipe_neutral_recipe_matches_input_pixels() {
         let pixels = [10_u8, 80, 200, 255, 250, 15, 60, 255];
-        let parameters = LightRecipe::default().kernel_parameters();
-        let parameters_floats = light_kernel_parameters_to_floats(parameters);
+        let parameters_floats = LightRecipe::default().kernel_parameters().to_floats();
         let mut red = [0_u32; 256];
         let mut green = [0_u32; 256];
         let mut blue = [0_u32; 256];
@@ -800,24 +955,5 @@ mod tests {
         assert_eq!(green[15], 1);
         assert_eq!(blue[200], 1);
         assert_eq!(blue[60], 1);
-    }
-
-    fn light_kernel_parameters_to_floats(parameters: LightKernelParameters) -> [f32; 14] {
-        [
-            parameters.exposure_gain,
-            parameters.contrast_exponent,
-            parameters.contrast_pivot,
-            parameters.highlights,
-            parameters.shadows,
-            parameters.shadow_lift_limit,
-            parameters.shadow_drop_limit,
-            parameters.highlight_pull_limit,
-            parameters.highlight_boost_limit,
-            parameters.shadow_mask_start,
-            parameters.shadow_mask_end,
-            parameters.shadow_black_anchor_end,
-            parameters.highlight_mask_start,
-            parameters.highlight_mask_end,
-        ]
     }
 }

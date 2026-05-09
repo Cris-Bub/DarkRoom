@@ -100,6 +100,7 @@ struct InspectorView: View {
                         value: $editRecipe.light.exposureEV,
                         range: LightAdjustments.exposureRange,
                         displayValue: signedValue(editRecipe.light.exposureEV, fractionDigits: 2),
+                        helpText: "Changes brightness in real stops before the image is tone-mapped.",
                         onEditingChanged: onAdjustmentEditingChanged
                     )
 
@@ -108,6 +109,16 @@ struct InspectorView: View {
                         value: $editRecipe.light.contrast,
                         range: LightAdjustments.contrastRange,
                         displayValue: signedValue(editRecipe.light.contrast),
+                        helpText: "Changes midtone separation while keeping the toe and shoulder smooth.",
+                        onEditingChanged: onAdjustmentEditingChanged
+                    )
+
+                    DRAdjustmentRow(
+                        title: "Pivot",
+                        value: $editRecipe.light.pivotEV,
+                        range: LightAdjustments.pivotRange,
+                        displayValue: signedValue(editRecipe.light.pivotEV, fractionDigits: 2),
+                        helpText: "Moves the tonal balance point for contrast.",
                         onEditingChanged: onAdjustmentEditingChanged
                     )
 
@@ -116,6 +127,7 @@ struct InspectorView: View {
                         value: $editRecipe.light.highlights,
                         range: LightAdjustments.highlightsRange,
                         displayValue: signedValue(editRecipe.light.highlights),
+                        helpText: "Shapes bright detail without acting as RAW highlight reconstruction.",
                         onEditingChanged: onAdjustmentEditingChanged
                     )
 
@@ -124,6 +136,25 @@ struct InspectorView: View {
                         value: $editRecipe.light.shadows,
                         range: LightAdjustments.shadowsRange,
                         displayValue: signedValue(editRecipe.light.shadows),
+                        helpText: "Opens or deepens darker tones with soft falloff.",
+                        onEditingChanged: onAdjustmentEditingChanged
+                    )
+
+                    DRAdjustmentRow(
+                        title: "Whites",
+                        value: $editRecipe.light.whites,
+                        range: LightAdjustments.whitesRange,
+                        displayValue: signedValue(editRecipe.light.whites),
+                        helpText: "Controls how the image approaches white.",
+                        onEditingChanged: onAdjustmentEditingChanged
+                    )
+
+                    DRAdjustmentRow(
+                        title: "Blacks",
+                        value: $editRecipe.light.blacks,
+                        range: LightAdjustments.blacksRange,
+                        displayValue: signedValue(editRecipe.light.blacks),
+                        helpText: "Controls how the image approaches black.",
                         onEditingChanged: onAdjustmentEditingChanged
                     )
 
