@@ -194,6 +194,55 @@ pub fn apply_light_luma_reference(input: f32, parameters: LightKernelParameters)
     apply_tonal_recovery_luma(contrasted, parameters)
 }
 
+pub fn apply_light_rgb_kernel(
+    red: f32,
+    green: f32,
+    blue: f32,
+    parameters: LightKernelParameters,
+) -> (f32, f32, f32) {
+    let r1 = (red * parameters.exposure_gain).max(0.0);
+    let g1 = (green * parameters.exposure_gain).max(0.0);
+    let b1 = (blue * parameters.exposure_gain).max(0.0);
+
+    let r2 = apply_pivoted_contrast_per_channel(
+        r1,
+        parameters.contrast_exponent,
+        parameters.contrast_pivot,
+    );
+    let g2 = apply_pivoted_contrast_per_channel(
+        g1,
+        parameters.contrast_exponent,
+        parameters.contrast_pivot,
+    );
+    let b2 = apply_pivoted_contrast_per_channel(
+        b1,
+        parameters.contrast_exponent,
+        parameters.contrast_pivot,
+    );
+
+    let luma = 0.2126 * r2 + 0.7152 * g2 + 0.0722 * b2;
+    let target_luma = apply_tonal_recovery_luma(luma, parameters);
+    let ratio = (target_luma / luma.max(1e-6)).max(0.0);
+
+    (r2 * ratio, g2 * ratio, b2 * ratio)
+}
+
+fn apply_pivoted_contrast_per_channel(input: f32, contrast: f32, pivot: f32) -> f32 {
+    if !input.is_finite() || !contrast.is_finite() || !pivot.is_finite() {
+        return input;
+    }
+
+    if pivot <= 0.0 || contrast <= 0.0 {
+        return input;
+    }
+
+    if input <= 0.0 {
+        return 0.0;
+    }
+
+    pivot * (input / pivot).powf(contrast)
+}
+
 pub fn apply_tonal_recovery_luma(input: f32, parameters: LightKernelParameters) -> f32 {
     if !input.is_finite() || input <= 0.0 {
         return input;
@@ -310,6 +359,175 @@ pub extern "C" fn darkroom_light_highlight_mask_start() -> f32 {
 #[no_mangle]
 pub extern "C" fn darkroom_light_highlight_mask_end() -> f32 {
     HIGHLIGHT_MASK_END
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn darkroom_histogram_rgba8(
+    rgba_pixels: *const u8,
+    byte_len: usize,
+    red_bins: *mut u32,
+    green_bins: *mut u32,
+    blue_bins: *mut u32,
+    luma_bins: *mut u32,
+    sampled_pixel_count: *mut u32,
+    shadow_clipped_pixel_count: *mut u32,
+    highlight_clipped_pixel_count: *mut u32,
+) -> u8 {
+    if rgba_pixels.is_null()
+        || red_bins.is_null()
+        || green_bins.is_null()
+        || blue_bins.is_null()
+        || luma_bins.is_null()
+        || sampled_pixel_count.is_null()
+        || shadow_clipped_pixel_count.is_null()
+        || highlight_clipped_pixel_count.is_null()
+        || byte_len % 4 != 0
+    {
+        return 0;
+    }
+
+    let pixels = std::slice::from_raw_parts(rgba_pixels, byte_len);
+    let red = std::slice::from_raw_parts_mut(red_bins, 256);
+    let green = std::slice::from_raw_parts_mut(green_bins, 256);
+    let blue = std::slice::from_raw_parts_mut(blue_bins, 256);
+    let luma = std::slice::from_raw_parts_mut(luma_bins, 256);
+
+    red.fill(0);
+    green.fill(0);
+    blue.fill(0);
+    luma.fill(0);
+
+    let mut sampled = 0_u32;
+    let mut shadow_clipped = 0_u32;
+    let mut highlight_clipped = 0_u32;
+
+    for pixel in pixels.chunks_exact(4) {
+        let red_value = pixel[0];
+        let green_value = pixel[1];
+        let blue_value = pixel[2];
+        let luma_value = rgb_to_luma_u8(red_value, green_value, blue_value);
+
+        red[red_value as usize] += 1;
+        green[green_value as usize] += 1;
+        blue[blue_value as usize] += 1;
+        luma[luma_value as usize] += 1;
+
+        if red_value == 0 && green_value == 0 && blue_value == 0 {
+            shadow_clipped += 1;
+        }
+
+        if red_value == 255 || green_value == 255 || blue_value == 255 {
+            highlight_clipped += 1;
+        }
+
+        sampled += 1;
+    }
+
+    *sampled_pixel_count = sampled;
+    *shadow_clipped_pixel_count = shadow_clipped;
+    *highlight_clipped_pixel_count = highlight_clipped;
+
+    1
+}
+
+fn rgb_to_luma_u8(red: u8, green: u8, blue: u8) -> u8 {
+    (0.2126 * red as f32 + 0.7152 * green as f32 + 0.0722 * blue as f32)
+        .round()
+        .clamp(0.0, 255.0) as u8
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn darkroom_histogram_apply_recipe_rgba8(
+    rgba_pixels: *const u8,
+    byte_len: usize,
+    parameters_floats: *const f32,
+    red_bins: *mut u32,
+    green_bins: *mut u32,
+    blue_bins: *mut u32,
+    luma_bins: *mut u32,
+    sampled_pixel_count: *mut u32,
+    shadow_clipped_pixel_count: *mut u32,
+    highlight_clipped_pixel_count: *mut u32,
+) -> u8 {
+    if rgba_pixels.is_null()
+        || parameters_floats.is_null()
+        || red_bins.is_null()
+        || green_bins.is_null()
+        || blue_bins.is_null()
+        || luma_bins.is_null()
+        || sampled_pixel_count.is_null()
+        || shadow_clipped_pixel_count.is_null()
+        || highlight_clipped_pixel_count.is_null()
+        || byte_len % 4 != 0
+    {
+        return 0;
+    }
+
+    let parameters_slice = std::slice::from_raw_parts(parameters_floats, 14);
+    let parameters = LightKernelParameters {
+        exposure_gain: parameters_slice[0],
+        contrast_exponent: parameters_slice[1],
+        contrast_pivot: parameters_slice[2],
+        highlights: parameters_slice[3],
+        shadows: parameters_slice[4],
+        shadow_lift_limit: parameters_slice[5],
+        shadow_drop_limit: parameters_slice[6],
+        highlight_pull_limit: parameters_slice[7],
+        highlight_boost_limit: parameters_slice[8],
+        shadow_mask_start: parameters_slice[9],
+        shadow_mask_end: parameters_slice[10],
+        shadow_black_anchor_end: parameters_slice[11],
+        highlight_mask_start: parameters_slice[12],
+        highlight_mask_end: parameters_slice[13],
+    };
+
+    let pixels = std::slice::from_raw_parts(rgba_pixels, byte_len);
+    let red = std::slice::from_raw_parts_mut(red_bins, 256);
+    let green = std::slice::from_raw_parts_mut(green_bins, 256);
+    let blue = std::slice::from_raw_parts_mut(blue_bins, 256);
+    let luma = std::slice::from_raw_parts_mut(luma_bins, 256);
+
+    red.fill(0);
+    green.fill(0);
+    blue.fill(0);
+    luma.fill(0);
+
+    let mut sampled = 0_u32;
+    let mut shadow_clipped = 0_u32;
+    let mut highlight_clipped = 0_u32;
+
+    for pixel in pixels.chunks_exact(4) {
+        let r_in = pixel[0] as f32 / 255.0;
+        let g_in = pixel[1] as f32 / 255.0;
+        let b_in = pixel[2] as f32 / 255.0;
+        let (r_out, g_out, b_out) = apply_light_rgb_kernel(r_in, g_in, b_in, parameters);
+
+        let red_value = (r_out * 255.0).round().clamp(0.0, 255.0) as u8;
+        let green_value = (g_out * 255.0).round().clamp(0.0, 255.0) as u8;
+        let blue_value = (b_out * 255.0).round().clamp(0.0, 255.0) as u8;
+        let luma_value = rgb_to_luma_u8(red_value, green_value, blue_value);
+
+        red[red_value as usize] += 1;
+        green[green_value as usize] += 1;
+        blue[blue_value as usize] += 1;
+        luma[luma_value as usize] += 1;
+
+        if red_value == 0 && green_value == 0 && blue_value == 0 {
+            shadow_clipped += 1;
+        }
+
+        if red_value == 255 || green_value == 255 || blue_value == 255 {
+            highlight_clipped += 1;
+        }
+
+        sampled += 1;
+    }
+
+    *sampled_pixel_count = sampled;
+    *shadow_clipped_pixel_count = shadow_clipped;
+    *highlight_clipped_pixel_count = highlight_clipped;
+
+    1
 }
 
 #[cfg(test)]
@@ -455,5 +673,151 @@ mod tests {
             );
             previous = output;
         }
+    }
+
+    #[test]
+    fn rgba_histogram_counts_channels_luma_and_clipping() {
+        let pixels = [
+            0_u8, 0, 0, 255,
+            255, 255, 255, 255,
+            255, 0, 0, 255,
+        ];
+        let mut red = [99_u32; 256];
+        let mut green = [99_u32; 256];
+        let mut blue = [99_u32; 256];
+        let mut luma = [99_u32; 256];
+        let mut sampled = 0;
+        let mut shadow_clipped = 0;
+        let mut highlight_clipped = 0;
+
+        let succeeded = unsafe {
+            darkroom_histogram_rgba8(
+                pixels.as_ptr(),
+                pixels.len(),
+                red.as_mut_ptr(),
+                green.as_mut_ptr(),
+                blue.as_mut_ptr(),
+                luma.as_mut_ptr(),
+                &mut sampled,
+                &mut shadow_clipped,
+                &mut highlight_clipped,
+            )
+        };
+
+        assert_eq!(succeeded, 1);
+        assert_eq!(sampled, 3);
+        assert_eq!(shadow_clipped, 1);
+        assert_eq!(highlight_clipped, 2);
+        assert_eq!(red[0], 1);
+        assert_eq!(red[255], 2);
+        assert_eq!(green[0], 2);
+        assert_eq!(green[255], 1);
+        assert_eq!(blue[0], 2);
+        assert_eq!(blue[255], 1);
+        assert_eq!(luma[0], 1);
+        assert_eq!(luma[54], 1);
+        assert_eq!(luma[255], 1);
+    }
+
+    #[test]
+    fn rgba_apply_recipe_one_stop_doubles_brightness() {
+        let pixels = [64_u8, 64, 64, 255];
+        let parameters = LightRecipe {
+            exposure_ev: 1.0,
+            ..Default::default()
+        }
+        .kernel_parameters();
+        let parameters_floats = light_kernel_parameters_to_floats(parameters);
+        let mut red = [99_u32; 256];
+        let mut green = [99_u32; 256];
+        let mut blue = [99_u32; 256];
+        let mut luma = [99_u32; 256];
+        let mut sampled = 0;
+        let mut shadow_clipped = 0;
+        let mut highlight_clipped = 0;
+
+        let succeeded = unsafe {
+            darkroom_histogram_apply_recipe_rgba8(
+                pixels.as_ptr(),
+                pixels.len(),
+                parameters_floats.as_ptr(),
+                red.as_mut_ptr(),
+                green.as_mut_ptr(),
+                blue.as_mut_ptr(),
+                luma.as_mut_ptr(),
+                &mut sampled,
+                &mut shadow_clipped,
+                &mut highlight_clipped,
+            )
+        };
+
+        assert_eq!(succeeded, 1);
+        assert_eq!(sampled, 1);
+        let red_bin = red.iter().position(|&count| count > 0).unwrap();
+        assert!(
+            (red_bin as i32 - 128).abs() <= 2,
+            "expected red bin near 128, got {red_bin}"
+        );
+        let green_bin = green.iter().position(|&count| count > 0).unwrap();
+        let blue_bin = blue.iter().position(|&count| count > 0).unwrap();
+        assert_eq!(red_bin, green_bin);
+        assert_eq!(green_bin, blue_bin);
+    }
+
+    #[test]
+    fn rgba_apply_recipe_neutral_recipe_matches_input_pixels() {
+        let pixels = [10_u8, 80, 200, 255, 250, 15, 60, 255];
+        let parameters = LightRecipe::default().kernel_parameters();
+        let parameters_floats = light_kernel_parameters_to_floats(parameters);
+        let mut red = [0_u32; 256];
+        let mut green = [0_u32; 256];
+        let mut blue = [0_u32; 256];
+        let mut luma = [0_u32; 256];
+        let mut sampled = 0;
+        let mut shadow_clipped = 0;
+        let mut highlight_clipped = 0;
+
+        let succeeded = unsafe {
+            darkroom_histogram_apply_recipe_rgba8(
+                pixels.as_ptr(),
+                pixels.len(),
+                parameters_floats.as_ptr(),
+                red.as_mut_ptr(),
+                green.as_mut_ptr(),
+                blue.as_mut_ptr(),
+                luma.as_mut_ptr(),
+                &mut sampled,
+                &mut shadow_clipped,
+                &mut highlight_clipped,
+            )
+        };
+
+        assert_eq!(succeeded, 1);
+        assert_eq!(sampled, 2);
+        assert_eq!(red[10], 1);
+        assert_eq!(red[250], 1);
+        assert_eq!(green[80], 1);
+        assert_eq!(green[15], 1);
+        assert_eq!(blue[200], 1);
+        assert_eq!(blue[60], 1);
+    }
+
+    fn light_kernel_parameters_to_floats(parameters: LightKernelParameters) -> [f32; 14] {
+        [
+            parameters.exposure_gain,
+            parameters.contrast_exponent,
+            parameters.contrast_pivot,
+            parameters.highlights,
+            parameters.shadows,
+            parameters.shadow_lift_limit,
+            parameters.shadow_drop_limit,
+            parameters.highlight_pull_limit,
+            parameters.highlight_boost_limit,
+            parameters.shadow_mask_start,
+            parameters.shadow_mask_end,
+            parameters.shadow_black_anchor_end,
+            parameters.highlight_mask_start,
+            parameters.highlight_mask_end,
+        ]
     }
 }

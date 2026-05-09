@@ -124,6 +124,59 @@ enum ImagePipelineRenderer {
         )
     }
 
+    static func renderHistogramPreview(
+        url: URL,
+        previewTarget: PreviewTarget,
+        editRecipe: EditRecipe,
+        maximumPixelSize: CGSize = CGSize(width: 256, height: 256),
+        rawBaseline: RawBaseline = .darkRoomStandard,
+        rawDecoder: any RawDecoder = AppleRawDecoder(),
+        contextProvider: ImagePipelineRenderContextProvider = .shared
+    ) throws -> PipelineRenderedImage {
+        let source = try prepareSource(
+            url: url,
+            rawBaseline: rawBaseline,
+            rawDecoder: rawDecoder
+        )
+
+        return try renderHistogramPreview(
+            preparedSource: source,
+            previewTarget: previewTarget,
+            editRecipe: editRecipe,
+            maximumPixelSize: maximumPixelSize,
+            contextProvider: contextProvider
+        )
+    }
+
+    static func renderHistogramPreview(
+        preparedSource source: PipelinePreparedSource,
+        previewTarget: PreviewTarget,
+        editRecipe: EditRecipe,
+        maximumPixelSize: CGSize = CGSize(width: 256, height: 256),
+        contextProvider: ImagePipelineRenderContextProvider = .shared
+    ) throws -> PipelineRenderedImage {
+        let previewSourceImage = try scaledToFit(source.image, maximumPixelSize: maximumPixelSize)
+        let editedImage = try EditRecipeRenderer.apply(editRecipe, to: previewSourceImage)
+        let outputImage = try proof(
+            editedImage,
+            outputColorSpace: previewTarget.colorSpace,
+            outputFormat: .RGBA8,
+            contextProvider: contextProvider
+        )
+
+        return PipelineRenderedImage(
+            cgImage: outputImage,
+            sourceKind: source.kind,
+            sourceProfileName: source.profileName,
+            sourceProfileWasAssumed: source.profileWasAssumed,
+            previewTarget: previewTarget,
+            rawBaseline: source.rawBaseline,
+            editRecipe: editRecipe,
+            workingColorSpaceName: WorkingColorSpace.displayName,
+            displayProfileName: nil
+        )
+    }
+
     private static func decodeSource(
         url: URL,
         rawBaseline: RawBaseline,

@@ -12,7 +12,7 @@
 
 ## Affords
 
-- A buildable app shell organized by responsibility: app entry, design system, UI composition, file browser, color pipeline policy, edit graph state, image pipeline rendering, export, RAW decoding, color-managed viewer, inspector, and settings.
+- A buildable app shell organized by responsibility: app entry, design system, UI composition, file browser, color pipeline policy, edit graph state, image pipeline rendering, histogram analysis, export, RAW decoding, color-managed viewer, inspector, and settings.
 
 ## Responsibilities
 
@@ -21,6 +21,7 @@
 - Keep preview/output color target policy in `ColorPipeline/`.
 - Keep non-destructive recipe state and sidecar persistence in `EditGraph/`.
 - Keep shared source decode, edit application, proofing, and display conversion in `ImagePipeline/`.
+- Keep edited-image histogram analysis and clipping state in `Histogram/`.
 - Keep file writing and save-panel export flow in `Exporting/`.
 - Keep RAW decoder swappability in `RawDecoding/`.
 - Keep preview render-readiness in the viewer layer so inspector controls can reflect whether a trustworthy preview exists.

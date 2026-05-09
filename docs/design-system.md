@@ -76,6 +76,7 @@ Current organisms:
 - Sidebar image browser.
 - Viewer pane.
 - Inspector pane with edit/crop/mask rail and subtle image details panel.
+- Inspector histogram with overlapping luminance/RGB channels and shadow/highlight clipping indicators.
 - Toolbar export action with compact progress/status feedback.
 
 Candidate organisms:
@@ -138,6 +139,8 @@ When changing UI:
 ## Inspector Pattern
 
 The inspector uses a right-side mode rail for major editing pages. `Edit` is the default page; `Crop` and `Mask` are placeholders until those tools exist. Image details do not belong inside edit-control sections. They are revealed from the bottom rail info button and shown as a small, low-prominence panel so metadata does not compete with editing controls.
+
+The inspector histogram sits above the edit controls. The body is drawn as a per-bin stack that goes gray where all three RGB channels overlap, fades to a muted yellow/cyan/magenta where two channels overlap, and reaches a muted single-channel color where only one channel reaches that height. Pure channel color is reserved for the thin top outlines and the small top-corner clipping indicators. The histogram should reflect the current edited image and selected `View As` target rather than source-only pixels, and it should keep the previous graph visible while live slider updates render.
 
 The Viewer section uses `View As` for output proofing language. It should avoid lower-level wording like "display profile" because the physical display profile is an implementation detail, not the creative/output target the user is choosing.
 

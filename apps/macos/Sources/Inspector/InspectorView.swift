@@ -5,6 +5,7 @@ struct InspectorView: View {
     @Binding var previewTarget: PreviewTarget
     @Binding var viewerBackground: ViewerBackground
     @Binding var editRecipe: EditRecipe
+    let histogramStatus: HistogramStatus
     let isReadOnly: Bool
     var onAdjustmentEditingChanged: (Bool) -> Void = { _ in }
     let onResetEdits: () -> Void
@@ -51,6 +52,8 @@ struct InspectorView: View {
     private var editPage: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
+                InspectorHistogramView(status: histogramStatus)
+
                 Text("Edit")
                     .font(DarkRoomDesign.Typography.inspectorTitle)
                     .foregroundStyle(DarkRoomDesign.Palette.primaryText)

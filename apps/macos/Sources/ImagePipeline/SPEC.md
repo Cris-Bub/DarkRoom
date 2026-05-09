@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`ImagePipeline/` owns the shared source decode, edit application, output proofing, and display conversion used by viewer previews and exports.
+`ImagePipeline/` owns the shared source decode, edit application, output proofing, and display conversion used by viewer previews, histogram analysis, and exports.
 
 ## Depends On
 
@@ -18,6 +18,7 @@
 - A prepared-source path that lets the viewer reuse the current decode while applying new edit recipes.
 - Reusable Core Image render contexts so interactive preview updates do not rebuild heavyweight context state for every frame.
 - Display preview rendering that ends at the current Mac display profile.
+- Histogram preview rendering that ends at the selected preview target without display-profile conversion.
 - Export rendering that ends at the requested output profile without using cached viewer pixels.
 
 ## Responsibilities
@@ -25,6 +26,7 @@
 - Decode raster and RAW inputs into Core Image sources.
 - Expose source preparation separately from display rendering so interactive preview updates do not reload the same source for every slider tick.
 - Support bounded preview source and output sizes for live viewing while preserving full-resolution source-plus-recipe export.
+- Support bounded histogram renders from source plus recipe so analysis does not sample viewer pixels.
 - Apply V1 light adjustments in the shared pipeline using parameters supplied by the Rust-owned recipe math.
 - Preserve tone ordering for shadow/highlight recovery; these controls should reshape luminance with bounded toe/shoulder behavior rather than invert or cross tonal regions.
 - Convert edited output through Linear ROMM RGB into selected preview/export targets.
@@ -35,6 +37,7 @@
 - Do not present UI, panels, alerts, or toolbar behavior here.
 - Do not write files here; export file writing belongs in `Exporting/`.
 - Do not own edit state or persistence.
+- Do not convert histogram analysis into a viewer-readiness or export-writing workflow.
 - Do not define design-system controls.
 
 ## Update Triggers

@@ -33,6 +33,7 @@ The first viewer and export implementations now share `ImagePipeline/` instead o
 - Core Image renders through Linear ROMM RGB, applies the V1 light recipe using Rust-derived parameter math, then proof-converts to the selected preview/export target.
 - Viewer preview renders through a Metal-backed Core Image surface sized to the current viewer bounds and adds one final display conversion into the current window/display color space. During active slider drags, the viewer uses a lower-resolution interactive working image and then renders the normal viewer-resolution preview when the drag ends.
 - Interactive viewer updates reuse prepared source data and render directly into the Metal drawable so slider drags do not queue stale AppKit image replacements.
+- Inspector histograms render a bounded analysis image from source plus recipe through the same edit and preview-target proofing path, but stop before the viewer-only display-profile conversion. During slider drags, the histogram skips Core Image entirely: it caches a small neutral RGBA8 buffer once per file/preview-target and runs the V1 light recipe plus binning in a single Rust C ABI call. When dragging ends, the canonical pipeline render+bin path runs to refresh the histogram at the settled analysis size and color path.
 - Export stops at the selected output target and writes JPEG, PNG, or TIFF through Image I/O with the rendered output color space.
 - The viewer observes window display/backing color-space changes and invalidates the preview cache when the app moves between displays or the display profile changes.
 - The rendered viewer image is display-referred preview data only. It must not become the export source or the persistent edit representation.
@@ -47,6 +48,7 @@ This is display-management accuracy, not Lightroom visual matching. Lightroom/Ca
 - Display transforms are separate from edit operations.
 - RAW white balance should eventually happen at RAW stage when RAW data is available.
 - Viewer readiness should gate edit controls; users should not be able to move grading controls when the selected image has not decoded into the current display preview.
+- The histogram should update with current light edits and `View As` target, including shadow/highlight clipping indicators derived from the proofed analysis image. It should preserve the previous graph while a newer slider position is rendering instead of flashing into a loading state.
 - Export must re-render from source plus edit recipe. It must not write cached viewer pixels.
 - Exports must carry their output color profile; silent untagged export is a bug.
 - V1 export target equals the current `View As` target until a dedicated export dialog/preset system exists.

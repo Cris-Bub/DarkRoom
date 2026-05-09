@@ -5,12 +5,19 @@ struct RootView: View {
     @ObservedObject var viewerRenderModel: ViewerRenderModel
     @ObservedObject var editSession: EditSessionModel
     @ObservedObject var exportModel: ImageExportModel
+    @ObservedObject var histogramModel: HistogramModel
     @Binding var previewTarget: PreviewTarget
     @Binding var viewerBackground: ViewerBackground
     @State private var isInteractiveEditing = false
 
     var body: some View {
         let currentRecipe = editSession.recipe(for: library.selectedImage)
+        let histogramRequestID = RootHistogramRequestID(
+            fileID: library.selectedImage?.id,
+            previewTarget: previewTarget,
+            editRecipe: currentRecipe,
+            isInteractiveEditing: isInteractiveEditing
+        )
 
         NavigationSplitView {
             SidebarView(library: library)
@@ -31,6 +38,7 @@ struct RootView: View {
                 previewTarget: $previewTarget,
                 viewerBackground: $viewerBackground,
                 editRecipe: editSession.binding(for: library.selectedImage),
+                histogramStatus: histogramModel.status,
                 isReadOnly: !viewerRenderModel.canEdit(
                     file: library.selectedImage,
                     previewTarget: previewTarget
@@ -93,5 +101,35 @@ struct RootView: View {
                 dismissButton: .default(Text("OK"))
             )
         }
+        .onAppear {
+            histogramModel.update(
+                file: library.selectedImage,
+                previewTarget: previewTarget,
+                editRecipe: currentRecipe,
+                isInteractive: isInteractiveEditing
+            )
+        }
+        .onChange(of: histogramRequestID) { _, _ in
+            histogramModel.update(
+                file: library.selectedImage,
+                previewTarget: previewTarget,
+                editRecipe: currentRecipe,
+                isInteractive: isInteractiveEditing
+            )
+        }
+    }
+}
+
+private struct RootHistogramRequestID: Equatable {
+    let fileID: String?
+    let previewTarget: PreviewTarget
+    let editRecipe: EditRecipe
+    let isInteractiveEditing: Bool
+
+    static func == (lhs: RootHistogramRequestID, rhs: RootHistogramRequestID) -> Bool {
+        lhs.fileID == rhs.fileID
+            && lhs.previewTarget.rawValue == rhs.previewTarget.rawValue
+            && lhs.editRecipe == rhs.editRecipe
+            && lhs.isInteractiveEditing == rhs.isInteractiveEditing
     }
 }
