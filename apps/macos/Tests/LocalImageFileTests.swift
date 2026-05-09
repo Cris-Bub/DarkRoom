@@ -19,6 +19,12 @@ final class LocalImageFileTests: XCTestCase {
         XCTAssertTrue(LocalImageFile.isSupported(url: URL(fileURLWithPath: "/tmp/fuji.RAF")))
     }
 
+    func testRawDetectionIsCaseInsensitiveAndSpecific() {
+        XCTAssertTrue(LocalImageFile.isRaw(url: URL(fileURLWithPath: "/tmp/sony.ARW")))
+        XCTAssertTrue(LocalImageFile.isRaw(url: URL(fileURLWithPath: "/tmp/iphone-pro-raw.DNG")))
+        XCTAssertFalse(LocalImageFile.isRaw(url: URL(fileURLWithPath: "/tmp/export.JPG")))
+    }
+
     func testUnsupportedImageExtensionsAreRejected() {
         XCTAssertFalse(LocalImageFile.isSupported(url: URL(fileURLWithPath: "/tmp/example.mov")))
         XCTAssertFalse(LocalImageFile.isSupported(url: URL(fileURLWithPath: "/tmp/example.txt")))

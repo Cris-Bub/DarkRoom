@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`Molecules/` is reserved for reusable UI groups composed from atoms and native controls.
+`Molecules/` contains reusable UI groups composed from atoms and native controls.
 
 ## Depends On
 
@@ -11,7 +11,7 @@
 
 ## Affords
 
-- A place for repeated control groups once they appear in multiple feature panes.
+- Repeated inspector control groups such as collapsible sections and adjustment rows.
 
 ## Responsibilities
 
@@ -25,4 +25,4 @@
 
 ## Update Triggers
 
-Update when the first molecule is added or when molecule ownership changes.
+Update when molecule inventory, interaction scope, or ownership changes.

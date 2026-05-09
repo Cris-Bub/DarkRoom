@@ -22,6 +22,7 @@
 - Keep decisions in `docs/decisions/`.
 - Keep file and folder spec conventions in `docs/specs/`.
 - Keep design language and atomic-design inventory in `docs/design-system.md`.
+- Keep color pipeline and viewer accuracy constraints in `docs/color-pipeline.md` until they need a more detailed subsystem doc.
 
 ## Boundaries
 

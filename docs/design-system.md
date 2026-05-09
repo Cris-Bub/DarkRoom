@@ -4,12 +4,13 @@ DarkRoom should feel like a quiet native macOS photo grading workstation: neutra
 
 ## Design Language Statement
 
-DarkRoom uses restrained macOS-native controls, neutral surfaces, compact spacing, clear hierarchy, and low-noise typography so users can judge photographs without the UI competing for attention. Color is reserved for image content, status, selection, warnings, and future measurement/scopes. The product should prefer durable professional patterns over decorative novelty.
+DarkRoom uses restrained custom workstation controls, neutral surfaces, compact spacing, clear hierarchy, and low-noise typography so users can judge photographs without the UI competing for attention. Native macOS behavior still matters for system affordances, menus, windows, file access, keyboard focus, and accessibility, but core editing surfaces should express a deliberate DarkRoom design language instead of exposing raw platform defaults everywhere. Color is reserved for image content, status, selection, warnings, and future measurement/scopes. The product should prefer durable professional patterns over decorative novelty.
 
 ## Principles
 
 - Image first: the photograph and scopes are the visual priority.
-- Native by default: use SwiftUI/AppKit patterns before inventing custom controls.
+- Custom by intention: prefer documented DarkRoom components for repeated editing workflows, especially sliders, rails, panels, scopes, metadata, and grading controls.
+- Native where it earns trust: use platform controls for OS-level behaviors, semantic pickers, menus, dialogs, text entry, focus, and accessibility when they match the product language or can be wrapped cleanly.
 - Quiet density: keep controls compact and scannable without feeling cramped.
 - Single source of truth: shared spacing, typography, labels, and reusable UI components belong in the design system.
 - Add slowly: create a token or component only when reuse, consistency, or future change leverage is real.
@@ -24,8 +25,9 @@ Tokens are primitive values used across UI code. They should live in `apps/macos
 Current token groups:
 
 - Spacing: repeated padding and gaps.
-- Typography: semantic text styles for panel headers, empty states, and viewer placeholders.
+- Typography: semantic text styles for panel headers, inspector titles, adjustment rows, empty states, and viewer placeholders.
 - Iconography: symbolic icon names that should remain consistent across the app.
+- Palette: neutral inspector, rail, control, border, and text roles.
 
 Future token groups:
 
@@ -42,11 +44,11 @@ Current atoms:
 - `DRPanelHeader`: standard compact panel header.
 - `DREmptyState`: icon, title, optional message, and optional action button.
 - `DRPlaceholderText`: quiet placeholder text for empty content regions.
+- `DRIconRailButton`: icon-only rail button with selected state and tooltip.
 
 Candidate atoms:
 
 - Label/value metadata row.
-- Icon-only toolbar button wrapper with tooltip.
 - Compact numeric control label.
 
 ### Molecules
@@ -55,11 +57,12 @@ Molecules combine atoms into reusable control groups.
 
 Current molecules:
 
-- None yet.
+- `DRCollapsibleSection`: Lightroom-like disclosure section for inspector groups.
+- `DRAdjustmentRow`: label, value, and custom adjustment slider.
+- `DRAdjustmentSlider`: horizontal adjustment control with a bordered circular knob whose fill matches the inspector surface.
 
 Candidate molecules:
 
-- Inspector slider row.
 - Background picker row.
 - Image metadata summary.
 - Scope panel header with mode selector.
@@ -72,7 +75,7 @@ Current organisms:
 
 - Sidebar image browser.
 - Viewer pane.
-- Inspector pane.
+- Inspector pane with edit/crop/mask rail and subtle image details panel.
 
 Candidate organisms:
 
@@ -125,7 +128,16 @@ If the answer is mostly no, keep the UI local and simple.
 When changing UI:
 
 1. Prefer existing tokens/components.
-2. If local styling duplicates an existing pattern, move it into the design system.
-3. If a new component is added, document it under the right atomic level.
-4. If a token changes visual language globally, mention the reason in this file or an ADR if consequential.
-5. Keep feature behavior in feature modules; design-system components should be presentational unless intentionally documented.
+2. If native controls are used directly, make sure they fit the documented product language or are operating system affordances where native behavior is the value.
+3. If local styling duplicates an existing pattern, move it into the design system.
+4. If a new component is added, document it under the right atomic level.
+5. If a token changes visual language globally, mention the reason in this file or an ADR if consequential.
+6. Keep feature behavior in feature modules; design-system components should be presentational unless intentionally documented.
+
+## Inspector Pattern
+
+The inspector uses a right-side mode rail for major editing pages. `Edit` is the default page; `Crop` and `Mask` are placeholders until those tools exist. Image details do not belong inside edit-control sections. They are revealed from the bottom rail info button and shown as a small, low-prominence panel so metadata does not compete with editing controls.
+
+Edit sections should be collapsible. Adjustment sliders use subdued labels and numeric values with a circular knob: bordered, light stroke, and filled with the local inspector background so the handle reads like a control rather than a filled badge.
+
+Editing controls must visibly enter a read-only state when no selected image has a rendered preview for the current display. The disabled state should preserve layout and hierarchy, but reduce contrast enough that users do not mistake unavailable controls for active grading state.

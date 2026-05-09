@@ -12,12 +12,13 @@
 
 ## Affords
 
-- A buildable app shell organized by responsibility: app entry, design system, UI composition, file browser, viewer, inspector, and settings.
+- A buildable app shell organized by responsibility: app entry, design system, UI composition, file browser, color-managed viewer, inspector, and settings.
 
 ## Responsibilities
 
 - Keep view composition readable.
 - Keep folder/file scanning and UI state in small models.
+- Keep preview render-readiness in the viewer layer so inspector controls can reflect whether a trustworthy preview exists.
 - Keep future engine bridge calls isolated from presentation views.
 - Route repeated visual decisions through `DesignSystem/` instead of duplicating local styling.
 

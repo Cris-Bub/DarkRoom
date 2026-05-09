@@ -11,7 +11,7 @@
 
 ## Affords
 
-- Consistent primitive UI pieces for feature views.
+- Consistent primitive UI pieces for feature views, including icon rail buttons and placeholder states.
 - A place to centralize repeated presentational patterns without absorbing feature behavior.
 
 ## Responsibilities

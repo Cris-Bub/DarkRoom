@@ -18,13 +18,13 @@
 
 - Keep components small, reusable, and presentational.
 - Follow atomic design naming and folder placement where it clarifies ownership.
-- Prefer native macOS controls and wrap only repeated product-specific patterns.
+- Prefer documented custom components for repeated editing workflows and use native macOS controls where platform behavior is the intended value.
 
 ## Boundaries
 
 - Do not put feature-specific state, folder scanning, image decoding, edit graph behavior, or engine math here.
 - Do not add abstractions for one-off UI until reuse or future change leverage is clear.
-- Do not use this folder to bypass macOS-native behavior.
+- Do not use this folder to bypass macOS-native behavior where platform semantics, accessibility, or system integration are the value.
 
 ## Update Triggers
 

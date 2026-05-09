@@ -21,42 +21,21 @@ struct LocalImageFile: Identifiable, Hashable {
         )
     }
 
-    private static let curatedSupportedExtensions: Set<String> = [
+    static let rawExtensions: Set<String> = [
         "3fr",
         "ari",
         "arw",
-        "avif",
         "bay",
-        "bmp",
         "cap",
         "cr2",
         "cr3",
         "crw",
         "dcr",
-        "dib",
         "dng",
         "eip",
         "erf",
-        "exr",
         "fff",
-        "gif",
-        "hdr",
-        "heic",
-        "heif",
-        "hif",
         "iiq",
-        "ico",
-        "j2k",
-        "jfi",
-        "jfif",
-        "jif",
-        "jp2",
-        "jpe",
-        "jpg",
-        "jpeg",
-        "jpf",
-        "jpm",
-        "jpx",
         "kdc",
         "mef",
         "mos",
@@ -78,12 +57,36 @@ struct LocalImageFile: Identifiable, Hashable {
         "sr2",
         "srf",
         "srw",
+        "x3f"
+    ]
+
+    private static let curatedSupportedExtensions: Set<String> = rawExtensions.union([
+        "avif",
+        "bmp",
+        "dib",
+        "exr",
+        "gif",
+        "hdr",
+        "heic",
+        "heif",
+        "hif",
+        "ico",
+        "j2k",
+        "jfi",
+        "jfif",
+        "jif",
+        "jp2",
+        "jpe",
+        "jpg",
+        "jpeg",
+        "jpf",
+        "jpm",
+        "jpx",
         "tga",
         "tif",
         "tiff",
-        "webp",
-        "x3f"
-    ]
+        "webp"
+    ])
 
     static func isSupported(url: URL) -> Bool {
         let pathExtension = url.pathExtension.lowercased()
@@ -93,6 +96,10 @@ struct LocalImageFile: Identifiable, Hashable {
         }
 
         return UTType(filenameExtension: pathExtension)?.conforms(to: .image) == true
+    }
+
+    static func isRaw(url: URL) -> Bool {
+        rawExtensions.contains(url.pathExtension.lowercased())
     }
 
     private static var systemSupportedExtensions: Set<String> {

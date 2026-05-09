@@ -38,7 +38,7 @@ Do not create specs for generated artifacts, transient build output, or trivial 
 - Read `docs/design-system.md` before substantial UI changes.
 - Prefer existing design tokens and reusable SwiftUI components from `apps/macos/Sources/DesignSystem`.
 - Follow the atomic design convention: tokens, atoms, molecules, organisms, templates, scenes.
-- Use native macOS controls unless the design system documents a product-specific wrapper.
+- Prefer documented DarkRoom custom components for repeated editing workflows; use native macOS controls for OS-level affordances, accessibility-sensitive semantics, dialogs, pickers, menus, and cases where the design system explicitly accepts the platform default.
 - Promote UI into the design system only when it has real reuse, consistency, or future-change value.
 - Keep design-system components presentational; feature state belongs in feature modules.
 - When adding or changing a token/component, update `docs/design-system.md` and the nearest `SPEC.md`.

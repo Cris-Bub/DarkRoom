@@ -5,6 +5,7 @@ enum ViewerBackground: String, CaseIterable, Identifiable {
     case darkGray
     case mediumGray
     case lightGray
+    case white
 
     var id: String {
         rawValue
@@ -20,6 +21,8 @@ enum ViewerBackground: String, CaseIterable, Identifiable {
             "Medium Gray"
         case .lightGray:
             "Light Gray"
+        case .white:
+            "White"
         }
     }
 
@@ -33,6 +36,8 @@ enum ViewerBackground: String, CaseIterable, Identifiable {
             Color(white: 0.42)
         case .lightGray:
             Color(white: 0.78)
+        case .white:
+            Color.white
         }
     }
 }
