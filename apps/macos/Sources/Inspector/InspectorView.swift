@@ -78,7 +78,14 @@ struct InspectorView: View {
                     }
                 }
 
-                DRCollapsibleSection("Viewer", systemImage: "rectangle.dashed", isExpanded: $viewerExpanded) {
+                DRCollapsibleSection(
+                    "Viewer",
+                    systemImage: "rectangle.dashed",
+                    isExpanded: $viewerExpanded,
+                    resetTitle: "Reset Viewer",
+                    isResetDisabled: previewTarget == .webInstagram && viewerBackground == .darkGray,
+                    onReset: resetViewerSection
+                ) {
                     Picker("View As", selection: $previewTarget) {
                         ForEach(PreviewTarget.allCases) { target in
                             Text(target.label).tag(target)
@@ -94,7 +101,14 @@ struct InspectorView: View {
                     .pickerStyle(.menu)
                 }
 
-                DRCollapsibleSection("Light", systemImage: "sun.max", isExpanded: $lightExpanded) {
+                DRCollapsibleSection(
+                    "Light",
+                    systemImage: "sun.max",
+                    isExpanded: $lightExpanded,
+                    resetTitle: "Reset Light",
+                    isResetDisabled: editRecipe.isNeutral,
+                    onReset: onResetEdits
+                ) {
                     DRAdjustmentRow(
                         title: "Exposure",
                         value: $editRecipe.light.exposureEV,
@@ -157,11 +171,6 @@ struct InspectorView: View {
                         helpText: "Controls how the image approaches black.",
                         onEditingChanged: onAdjustmentEditingChanged
                     )
-
-                    Button("Reset Light", action: onResetEdits)
-                        .buttonStyle(.borderless)
-                        .foregroundStyle(DarkRoomDesign.Palette.subtleText)
-                        .disabled(editRecipe.isNeutral)
                 }
 
                 DRCollapsibleSection("Curve", systemImage: "point.topleft.down.curvedto.point.bottomright.up", isExpanded: $curveExpanded) {
@@ -312,6 +321,11 @@ struct InspectorView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(DarkRoomDesign.Spacing.large)
         .opacity(isReadOnly ? 0.46 : 1)
+    }
+
+    private func resetViewerSection() {
+        previewTarget = .webInstagram
+        viewerBackground = .darkGray
     }
 
     private func signedValue(_ value: Double, fractionDigits: Int = 0) -> String {

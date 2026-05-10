@@ -57,8 +57,8 @@ Molecules combine atoms into reusable control groups.
 
 Current molecules:
 
-- `DRCollapsibleSection`: Lightroom-like disclosure section for inspector groups.
-- `DRAdjustmentRow`: label, value, and custom adjustment slider.
+- `DRCollapsibleSection`: Lightroom-like disclosure section for inspector groups, with optional feature-supplied header reset actions.
+- `DRAdjustmentRow`: label, clickable bounded value entry, and custom adjustment slider.
 - `DRAdjustmentSlider`: horizontal adjustment control with a bordered circular knob whose fill matches the inspector surface.
 
 Candidate molecules:
@@ -144,7 +144,9 @@ The inspector histogram sits above the edit controls. The body is drawn as a per
 
 The Viewer section uses `View As` for output proofing language. It should avoid lower-level wording like "display profile" because the physical display profile is an implementation detail, not the creative/output target the user is choosing.
 
-Edit sections should be collapsible. V1 tonal controls are Exposure, Contrast, Pivot, Highlights, Shadows, Whites, and Blacks. Adjustment sliders use subdued labels and numeric values with a circular knob: bordered, light stroke, and filled with the local inspector background so the handle reads like a control rather than a filled badge. Sliders should surface active drag state to feature code so viewer previews can switch into a faster interactive render mode while the pointer is down. Tooltips should be plain-language descriptions of the tonal intent, not implementation terms.
+Edit sections should be collapsible. V1 tonal controls are Exposure, Contrast, Pivot, Highlights, Shadows, Whites, and Blacks. Adjustment sliders use subdued labels and numeric values with a circular knob: bordered, light stroke, and filled with the local inspector background so the handle reads like a control rather than a filled badge. Numeric value readouts should be clickable and temporarily become compact entry fields that clamp to the same bounds as the slider. Sliders and numeric entry should surface active editing state to feature code so viewer previews can switch into a faster interactive render mode while edits are in progress. Tooltips should be plain-language descriptions of the tonal intent, not implementation terms.
+
+Edit and developer-tuning sections may expose section-level resets from the collapsible header. The reusable component owns only the small reset icon and matching context-menu affordance; the feature module decides which fields reset and when the action is disabled.
 
 Editing controls must visibly enter a read-only state when no selected image has a rendered preview for the current display. The disabled state should preserve layout and hierarchy, but reduce contrast enough that users do not mistake unavailable controls for active grading state.
 

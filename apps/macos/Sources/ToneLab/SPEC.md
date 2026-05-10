@@ -17,6 +17,7 @@
 - Local, non-persisted normal light sliders for testing user-facing recipe values.
 - Mutable hidden tuning constants that can be copied as JSON and later baked into the Rust-owned default tuning.
 - Affected-range overlays for tonal controls using the same influence parameters as the renderer.
+- Section-level resets for test recipe values and each hidden tuning group.
 
 ## Responsibilities
 
@@ -24,6 +25,7 @@
 - Keep tuning constants separate from user edit recipes and sidecar persistence.
 - Favor fast visual iteration over polished end-user presentation.
 - Route preview rendering through the existing viewer/image pipeline instead of inventing a second tone renderer.
+- Keep section resets local to the visible Tone Lab group instead of changing unrelated tuning constants.
 
 ## Boundaries
 

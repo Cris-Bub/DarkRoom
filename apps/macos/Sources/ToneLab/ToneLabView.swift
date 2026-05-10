@@ -156,7 +156,10 @@ struct ToneLabView: View {
         DRCollapsibleSection(
             "Test Light Sliders",
             systemImage: "slider.horizontal.3",
-            isExpanded: $recipeExpanded
+            isExpanded: $recipeExpanded,
+            resetTitle: "Reset Test Light Sliders",
+            isResetDisabled: toneRecipe.isNeutral,
+            onReset: resetRecipeSection
         ) {
             ToneLabSlider(
                 title: "Exposure",
@@ -210,7 +213,10 @@ struct ToneLabView: View {
             DRCollapsibleSection(
                 "Global Base Curve",
                 systemImage: "circle.lefthalf.filled",
-                isExpanded: $globalExpanded
+                isExpanded: $globalExpanded,
+                resetTitle: "Reset Global Base Curve",
+                isResetDisabled: toneTuning.global == ToneTuning.defaultV1.global,
+                onReset: resetGlobalSection
             ) {
                 ToneLabSlider(title: "Middle Gray", value: $toneTuning.global.middleGray, range: 0.08...0.35, fractionDigits: 3, onEditingChanged: handleEditingChanged)
                 ToneLabSlider(title: "Base Contrast", value: $toneTuning.global.baseContrast, range: 0.6...1.6, fractionDigits: 2, onEditingChanged: handleEditingChanged)
@@ -224,7 +230,10 @@ struct ToneLabView: View {
             DRCollapsibleSection(
                 "Contrast / Pivot",
                 systemImage: "arrow.up.left.and.arrow.down.right",
-                isExpanded: $contrastExpanded
+                isExpanded: $contrastExpanded,
+                resetTitle: "Reset Contrast / Pivot",
+                isResetDisabled: toneTuning.contrast == ToneTuning.defaultV1.contrast,
+                onReset: resetContrastSection
             ) {
                 ToneLabSlider(title: "Max Slope Boost", value: $toneTuning.contrast.maxSlopeBoost, range: 0.0...3.0, fractionDigits: 2, onEditingChanged: handleEditingChanged)
                 ToneLabSlider(title: "Max Slope Reduction", value: $toneTuning.contrast.maxSlopeReduction, range: 0.0...3.0, fractionDigits: 2, onEditingChanged: handleEditingChanged)
@@ -240,7 +249,10 @@ struct ToneLabView: View {
                 isExpanded: $highlightsExpanded,
                 startRange: 0.0...4.0,
                 fullRange: 0.5...6.0,
-                endpointLabel: "White Protection"
+                endpointLabel: "White Protection",
+                defaultTuning: ToneTuning.defaultV1.highlights,
+                resetTitle: "Reset Highlights",
+                onReset: resetHighlightsSection
             )
 
             rangeSection(
@@ -250,7 +262,10 @@ struct ToneLabView: View {
                 isExpanded: $shadowsExpanded,
                 startRange: -4.0...0.0,
                 fullRange: -6.0 ... -0.5,
-                endpointLabel: "Black Protection"
+                endpointLabel: "Black Protection",
+                defaultTuning: ToneTuning.defaultV1.shadows,
+                resetTitle: "Reset Shadows",
+                onReset: resetShadowsSection
             )
 
             endpointSection(
@@ -259,7 +274,10 @@ struct ToneLabView: View {
                 tuning: $toneTuning.whites,
                 isExpanded: $whitesExpanded,
                 startRange: 0.0...6.0,
-                protectionLabel: "Clip Protection"
+                protectionLabel: "Clip Protection",
+                defaultTuning: ToneTuning.defaultV1.whites,
+                resetTitle: "Reset Whites",
+                onReset: resetWhitesSection
             )
 
             endpointSection(
@@ -268,13 +286,19 @@ struct ToneLabView: View {
                 tuning: $toneTuning.blacks,
                 isExpanded: $blacksExpanded,
                 startRange: -6.0...0.0,
-                protectionLabel: "Crush Protection"
+                protectionLabel: "Crush Protection",
+                defaultTuning: ToneTuning.defaultV1.blacks,
+                resetTitle: "Reset Blacks",
+                onReset: resetBlacksSection
             )
 
             DRCollapsibleSection(
                 "Slider Mapping",
                 systemImage: "dial.low",
-                isExpanded: $sliderMappingExpanded
+                isExpanded: $sliderMappingExpanded,
+                resetTitle: "Reset Slider Mapping",
+                isResetDisabled: toneTuning.sliderMapping == ToneTuning.defaultV1.sliderMapping,
+                onReset: resetSliderMappingSection
             ) {
                 ToneLabSlider(title: "Near Zero Sensitivity", value: $toneTuning.sliderMapping.nearZeroSensitivity, range: 0.0...2.0, fractionDigits: 2, onEditingChanged: handleEditingChanged)
                 ToneLabSlider(title: "Mid Sensitivity", value: $toneTuning.sliderMapping.midSensitivity, range: 0.0...2.0, fractionDigits: 2, onEditingChanged: handleEditingChanged)
@@ -291,9 +315,19 @@ struct ToneLabView: View {
         isExpanded: Binding<Bool>,
         startRange: ClosedRange<Double>,
         fullRange: ClosedRange<Double>,
-        endpointLabel: String
+        endpointLabel: String,
+        defaultTuning: RangeToneTuning,
+        resetTitle: String,
+        onReset: @escaping () -> Void
     ) -> some View {
-        DRCollapsibleSection(title, systemImage: systemImage, isExpanded: isExpanded) {
+        DRCollapsibleSection(
+            title,
+            systemImage: systemImage,
+            isExpanded: isExpanded,
+            resetTitle: resetTitle,
+            isResetDisabled: tuning.wrappedValue == defaultTuning,
+            onReset: onReset
+        ) {
             ToneLabSlider(title: "Start EV", value: tuning.startEV, range: startRange, fractionDigits: 2, onEditingChanged: handleEditingChanged)
             ToneLabSlider(title: "Full EV", value: tuning.fullEV, range: fullRange, fractionDigits: 2, onEditingChanged: handleEditingChanged)
             ToneLabSlider(title: "Max Lift EV", value: tuning.maxLiftEV, range: 0.0...5.0, fractionDigits: 2, onEditingChanged: handleEditingChanged)
@@ -310,9 +344,19 @@ struct ToneLabView: View {
         tuning: Binding<EndpointToneTuning>,
         isExpanded: Binding<Bool>,
         startRange: ClosedRange<Double>,
-        protectionLabel: String
+        protectionLabel: String,
+        defaultTuning: EndpointToneTuning,
+        resetTitle: String,
+        onReset: @escaping () -> Void
     ) -> some View {
-        DRCollapsibleSection(title, systemImage: systemImage, isExpanded: isExpanded) {
+        DRCollapsibleSection(
+            title,
+            systemImage: systemImage,
+            isExpanded: isExpanded,
+            resetTitle: resetTitle,
+            isResetDisabled: tuning.wrappedValue == defaultTuning,
+            onReset: onReset
+        ) {
             ToneLabSlider(title: "Start EV", value: tuning.startEV, range: startRange, fractionDigits: 2, onEditingChanged: handleEditingChanged)
             ToneLabSlider(title: "Strength", value: tuning.strength, range: 0.0...2.0, fractionDigits: 2, onEditingChanged: handleEditingChanged)
             ToneLabSlider(title: "Max Shift EV", value: tuning.maxShiftEV, range: 0.0...4.0, fractionDigits: 2, onEditingChanged: handleEditingChanged)
@@ -362,12 +406,57 @@ struct ToneLabView: View {
 
     private func resetTuning() {
         toneTuning = .defaultV1
-        copyStatus = "Reset to current V1 defaults"
+        finishSectionReset("Reset to current V1 defaults")
+    }
+
+    private func resetRecipeSection() {
+        toneRecipe = .neutral
+        finishSectionReset("Reset test light sliders")
+    }
+
+    private func resetGlobalSection() {
+        toneTuning.global = ToneTuning.defaultV1.global
+        finishSectionReset("Reset global base curve")
+    }
+
+    private func resetContrastSection() {
+        toneTuning.contrast = ToneTuning.defaultV1.contrast
+        finishSectionReset("Reset contrast / pivot")
+    }
+
+    private func resetHighlightsSection() {
+        toneTuning.highlights = ToneTuning.defaultV1.highlights
+        finishSectionReset("Reset highlights")
+    }
+
+    private func resetShadowsSection() {
+        toneTuning.shadows = ToneTuning.defaultV1.shadows
+        finishSectionReset("Reset shadows")
+    }
+
+    private func resetWhitesSection() {
+        toneTuning.whites = ToneTuning.defaultV1.whites
+        finishSectionReset("Reset whites")
+    }
+
+    private func resetBlacksSection() {
+        toneTuning.blacks = ToneTuning.defaultV1.blacks
+        finishSectionReset("Reset blacks")
+    }
+
+    private func resetSliderMappingSection() {
+        toneTuning.sliderMapping = ToneTuning.defaultV1.sliderMapping
+        finishSectionReset("Reset slider mapping")
     }
 
     private func loadSuggestedCandidate() {
         toneTuning = .suggestedCandidate01
         copyStatus = "Loaded suggested candidate 01"
+    }
+
+    private func finishSectionReset(_ message: String) {
+        isInteractiveEditing = false
+        copyStatus = message
     }
 }
 
