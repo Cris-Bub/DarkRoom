@@ -7,6 +7,8 @@ struct ViewerMetalImageView: NSViewRepresentable {
     let background: ViewerBackground
     let previewTarget: PreviewTarget
     let editRecipe: EditRecipe
+    var toneTuning: ToneTuning = .defaultV1
+    var toneOverlay: ToneRangeOverlay = .off
     let displayProfile: ViewerDisplayProfile
     let isInteractiveEditing: Bool
     let rawBaseline: RawBaseline = .darkRoomStandard
@@ -33,6 +35,8 @@ struct ViewerMetalImageView: NSViewRepresentable {
             file: file,
             previewTarget: previewTarget,
             editRecipe: editRecipe,
+            toneTuning: toneTuning,
+            toneOverlay: toneOverlay,
             displayProfile: displayProfile,
             isInteractiveEditing: isInteractiveEditing,
             rawBaseline: rawBaseline,
@@ -52,6 +56,8 @@ struct ViewerMetalImageView: NSViewRepresentable {
         private var sourceTask: Task<Void, Never>?
         private var previewTarget: PreviewTarget = .webInstagram
         private var editRecipe: EditRecipe = .neutral
+        private var toneTuning: ToneTuning = .defaultV1
+        private var toneOverlay: ToneRangeOverlay = .off
         private var displayProfile = ViewerDisplayProfile.current()
         private var isInteractiveEditing = false
 
@@ -78,6 +84,8 @@ struct ViewerMetalImageView: NSViewRepresentable {
             file: LocalImageFile,
             previewTarget: PreviewTarget,
             editRecipe: EditRecipe,
+            toneTuning: ToneTuning,
+            toneOverlay: ToneRangeOverlay,
             displayProfile: ViewerDisplayProfile,
             isInteractiveEditing: Bool,
             rawBaseline: RawBaseline,
@@ -86,6 +94,8 @@ struct ViewerMetalImageView: NSViewRepresentable {
             stateQueue.sync {
                 self.previewTarget = previewTarget
                 self.editRecipe = editRecipe
+                self.toneTuning = toneTuning
+                self.toneOverlay = toneOverlay
                 self.displayProfile = displayProfile
                 self.isInteractiveEditing = isInteractiveEditing
             }
@@ -193,6 +203,8 @@ struct ViewerMetalImageView: NSViewRepresentable {
                     source: source,
                     previewTarget: self.previewTarget,
                     editRecipe: self.editRecipe,
+                    toneTuning: self.toneTuning,
+                    toneOverlay: self.toneOverlay,
                     displayColorSpace: self.displayProfile.colorSpace,
                     drawableBounds: CGRect(origin: .zero, size: drawableSize),
                     isInteractiveEditing: self.isInteractiveEditing
@@ -232,7 +244,12 @@ struct ViewerMetalImageView: NSViewRepresentable {
                 ty: -imageExtent.minY * sourceToWorkingScale
             )
             let workingSizedImage = state.source.image.transformed(by: sourceToWorkingTransform)
-            let editedImage = try EditRecipeRenderer.apply(state.editRecipe, to: workingSizedImage)
+            let editedImage = try EditRecipeRenderer.apply(
+                state.editRecipe,
+                to: workingSizedImage,
+                toneTuning: state.toneTuning,
+                overlay: state.toneOverlay
+            )
 
             guard interactiveScale < 1 else {
                 return editedImage.transformed(
@@ -274,6 +291,8 @@ private struct RenderState {
     let source: PipelinePreparedSource
     let previewTarget: PreviewTarget
     let editRecipe: EditRecipe
+    let toneTuning: ToneTuning
+    let toneOverlay: ToneRangeOverlay
     let displayColorSpace: CGColorSpace
     let drawableBounds: CGRect
     let isInteractiveEditing: Bool

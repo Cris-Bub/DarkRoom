@@ -15,6 +15,8 @@ final class EditRecipeTests: XCTestCase {
         XCTAssertEqual(recipe.light.blacks, 0)
         XCTAssertEqual(recipe.light.exposureGain, 1, accuracy: 0.000_001)
         XCTAssertEqual(recipe.light.kernelParameters.count, DarkroomCoreLightMath.kernelParameterCount)
+        XCTAssertEqual(ToneTuning.defaultV1.flatParameters.count, DarkroomCoreLightMath.toneTuningParameterCount)
+        XCTAssertEqual(ToneTuning.defaultV1.flatParameters, DarkroomCoreLightMath.defaultToneTuningParameters())
     }
 
     func testLightAdjustmentMappingsAreCenteredOnNeutral() {
@@ -34,6 +36,37 @@ final class EditRecipeTests: XCTestCase {
         XCTAssertEqual(light.normalizedShadows, 0.15625, accuracy: 0.000_001)
         XCTAssertGreaterThan(light.normalizedWhites, 0)
         XCTAssertLessThan(light.normalizedBlacks, 0)
+    }
+
+    func testToneTuningChangesKernelParametersWithoutMutatingRecipeValues() {
+        var light = LightAdjustments()
+        light.highlights = -100
+        light.shadows = 100
+
+        var tuning = ToneTuning.defaultV1
+        tuning.highlights.maxPullEV = -3
+        tuning.highlights.startEV = 0.35
+        tuning.shadows.maxLiftEV = 3
+        tuning.shadows.startEV = -0.35
+
+        let defaultParameters = light.kernelParameters
+        let tunedParameters = light.kernelParameters(toneTuning: tuning)
+
+        XCTAssertLessThan(tunedParameters[3], defaultParameters[3])
+        XCTAssertGreaterThan(tunedParameters[4], defaultParameters[4])
+        XCTAssertLessThan(tunedParameters[16], defaultParameters[16])
+        XCTAssertLessThan(tunedParameters[14], defaultParameters[14])
+        XCTAssertEqual(light.highlights, -100)
+        XCTAssertEqual(light.shadows, 100)
+    }
+
+    func testToneTuningCopiesAsReadableJSON() throws {
+        let json = ToneTuning.suggestedCandidate01.prettyPrintedJSON
+        let decoded = try JSONDecoder().decode(ToneTuning.self, from: Data(json.utf8))
+
+        XCTAssertEqual(decoded, .suggestedCandidate01)
+        XCTAssertTrue(json.contains("\"highlights\""))
+        XCTAssertTrue(json.contains("\"sliderMapping\""))
     }
 
     @MainActor

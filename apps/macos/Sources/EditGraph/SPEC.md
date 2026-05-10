@@ -14,12 +14,14 @@
 ## Affords
 
 - A V1 tone recipe: exposure, contrast, pivot, highlights, shadows, whites, and blacks.
+- A V1 `ToneTuning` model for hidden developer constants that shape how visible tone sliders map into kernel behavior.
 - Per-file edit state that loads from and saves to DarkRoom XMP sidecars beside source images.
 - One value schema that inspector controls, preview rendering, and export rendering can share.
 
 ## Responsibilities
 
 - Keep edit values independent from UI controls.
+- Keep hidden tuning constants separate from user-facing recipes and sidecar persistence.
 - Keep V1 slider ranges and neutral defaults centralized.
 - Keep the named V1 curve model beside the recipe values so future tone-curve versions can preserve old edits.
 - Provide recipe lookup that caches current-session values immediately while coalescing sidecar writes off the live adjustment path.

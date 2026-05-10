@@ -14,6 +14,7 @@
 - Scene-linear exposure reference behavior.
 - Legacy pivoted contrast reference behavior kept for focused math tests.
 - V1 `darkroom_tonal_curve_v1` recipe parameter mapping for exposure, contrast, pivot, bounded highlights, bounded shadows, whites, and blacks.
+- V1 `ToneTuning` defaults and tuning-to-kernel mapping for developer Tone Lab experiments.
 - C ABI exports that the macOS target can link against for tonal parameter math, histogram binning, and per-pixel tone recipe application used by the interactive histogram fast path.
 - A minimal light recipe model for early edit graph work.
 
@@ -21,6 +22,7 @@
 
 - Keep core math deterministic and well tested.
 - Keep the V1 tonal curve monotonic and bounded so extreme settings cannot invert tonal order.
+- Keep production tuning defaults explicit so Tone Lab experiments do not silently change normal app behavior.
 - Keep histogram binning deterministic and fast enough for interactive inspector updates.
 - Prefer small functions with direct tests before broader graph abstractions.
 - Provide behavior that Swift and future shader paths can match.

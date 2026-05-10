@@ -21,6 +21,8 @@ enum ImagePipelineRenderer {
         displayProfileName: String,
         previewTarget: PreviewTarget,
         editRecipe: EditRecipe,
+        toneTuning: ToneTuning = .defaultV1,
+        toneOverlay: ToneRangeOverlay = .off,
         maximumPixelSize: CGSize? = nil,
         rawBaseline: RawBaseline = .darkRoomStandard,
         rawDecoder: any RawDecoder = AppleRawDecoder(),
@@ -38,6 +40,8 @@ enum ImagePipelineRenderer {
             displayProfileName: displayProfileName,
             previewTarget: previewTarget,
             editRecipe: editRecipe,
+            toneTuning: toneTuning,
+            toneOverlay: toneOverlay,
             maximumPixelSize: maximumPixelSize,
             contextProvider: contextProvider
         )
@@ -49,11 +53,18 @@ enum ImagePipelineRenderer {
         displayProfileName: String,
         previewTarget: PreviewTarget,
         editRecipe: EditRecipe,
+        toneTuning: ToneTuning = .defaultV1,
+        toneOverlay: ToneRangeOverlay = .off,
         maximumPixelSize: CGSize? = nil,
         contextProvider: ImagePipelineRenderContextProvider = .shared
     ) throws -> PipelineRenderedImage {
         let previewSourceImage = try scaledToFit(source.image, maximumPixelSize: maximumPixelSize)
-        let editedImage = try EditRecipeRenderer.apply(editRecipe, to: previewSourceImage)
+        let editedImage = try EditRecipeRenderer.apply(
+            editRecipe,
+            to: previewSourceImage,
+            toneTuning: toneTuning,
+            overlay: toneOverlay
+        )
         let proofedImage = try proof(
             editedImage,
             outputColorSpace: previewTarget.colorSpace,
@@ -93,6 +104,7 @@ enum ImagePipelineRenderer {
         url: URL,
         outputTarget: PreviewTarget,
         editRecipe: EditRecipe,
+        toneTuning: ToneTuning = .defaultV1,
         outputFormat: CIFormat,
         rawBaseline: RawBaseline = .darkRoomStandard,
         rawDecoder: any RawDecoder = AppleRawDecoder(),
@@ -103,7 +115,11 @@ enum ImagePipelineRenderer {
             rawBaseline: rawBaseline,
             rawDecoder: rawDecoder
         )
-        let editedImage = try EditRecipeRenderer.apply(editRecipe, to: source.image)
+        let editedImage = try EditRecipeRenderer.apply(
+            editRecipe,
+            to: source.image,
+            toneTuning: toneTuning
+        )
         let outputImage = try proof(
             editedImage,
             outputColorSpace: outputTarget.colorSpace,
@@ -128,6 +144,7 @@ enum ImagePipelineRenderer {
         url: URL,
         previewTarget: PreviewTarget,
         editRecipe: EditRecipe,
+        toneTuning: ToneTuning = .defaultV1,
         maximumPixelSize: CGSize = CGSize(width: 256, height: 256),
         rawBaseline: RawBaseline = .darkRoomStandard,
         rawDecoder: any RawDecoder = AppleRawDecoder(),
@@ -143,6 +160,7 @@ enum ImagePipelineRenderer {
             preparedSource: source,
             previewTarget: previewTarget,
             editRecipe: editRecipe,
+            toneTuning: toneTuning,
             maximumPixelSize: maximumPixelSize,
             contextProvider: contextProvider
         )
@@ -152,11 +170,16 @@ enum ImagePipelineRenderer {
         preparedSource source: PipelinePreparedSource,
         previewTarget: PreviewTarget,
         editRecipe: EditRecipe,
+        toneTuning: ToneTuning = .defaultV1,
         maximumPixelSize: CGSize = CGSize(width: 256, height: 256),
         contextProvider: ImagePipelineRenderContextProvider = .shared
     ) throws -> PipelineRenderedImage {
         let previewSourceImage = try scaledToFit(source.image, maximumPixelSize: maximumPixelSize)
-        let editedImage = try EditRecipeRenderer.apply(editRecipe, to: previewSourceImage)
+        let editedImage = try EditRecipeRenderer.apply(
+            editRecipe,
+            to: previewSourceImage,
+            toneTuning: toneTuning
+        )
         let outputImage = try proof(
             editedImage,
             outputColorSpace: previewTarget.colorSpace,

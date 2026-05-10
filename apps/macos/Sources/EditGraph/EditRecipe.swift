@@ -52,4 +52,8 @@ struct LightAdjustments: Codable, Equatable, Hashable, Sendable {
     var kernelParameters: [Float] {
         DarkroomCoreLightMath.kernelParameters(for: self)
     }
+
+    func kernelParameters(toneTuning: ToneTuning) -> [Float] {
+        DarkroomCoreLightMath.kernelParameters(for: self, toneTuning: toneTuning)
+    }
 }

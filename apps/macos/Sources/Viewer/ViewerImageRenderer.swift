@@ -20,6 +20,8 @@ enum ViewerImageRenderer {
         displayProfile: ViewerDisplayProfile,
         previewTarget: PreviewTarget,
         editRecipe: EditRecipe = .neutral,
+        toneTuning: ToneTuning = .defaultV1,
+        toneOverlay: ToneRangeOverlay = .off,
         maximumPixelSize: CGSize? = nil,
         rawBaseline: RawBaseline = .darkRoomStandard,
         rawDecoder: any RawDecoder = AppleRawDecoder(),
@@ -31,6 +33,8 @@ enum ViewerImageRenderer {
             displayProfileName: displayProfile.displayName,
             previewTarget: previewTarget,
             editRecipe: editRecipe,
+            toneTuning: toneTuning,
+            toneOverlay: toneOverlay,
             maximumPixelSize: maximumPixelSize,
             rawBaseline: rawBaseline,
             rawDecoder: rawDecoder,
@@ -48,6 +52,8 @@ enum ViewerImageRenderer {
         displayProfile: ViewerDisplayProfile,
         previewTarget: PreviewTarget,
         editRecipe: EditRecipe = .neutral,
+        toneTuning: ToneTuning = .defaultV1,
+        toneOverlay: ToneRangeOverlay = .off,
         maximumPixelSize: CGSize? = nil,
         contextProvider: ImagePipelineRenderContextProvider = .shared
     ) throws -> RenderedViewerImage {
@@ -57,6 +63,8 @@ enum ViewerImageRenderer {
             displayProfileName: displayProfile.displayName,
             previewTarget: previewTarget,
             editRecipe: editRecipe,
+            toneTuning: toneTuning,
+            toneOverlay: toneOverlay,
             maximumPixelSize: maximumPixelSize,
             contextProvider: contextProvider
         )

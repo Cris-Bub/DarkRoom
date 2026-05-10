@@ -2,7 +2,8 @@ pub const DARKROOM_TONAL_CURVE_V1: &str = "darkroom_tonal_curve_v1";
 pub const DEFAULT_CONTRAST_PIVOT: f32 = MIDDLE_GRAY;
 pub const MIDDLE_GRAY: f32 = 0.18;
 pub const TONE_EPSILON: f32 = 1.0e-6;
-pub const LIGHT_KERNEL_PARAMETER_COUNT: usize = 23;
+pub const LIGHT_KERNEL_PARAMETER_COUNT: usize = 39;
+pub const TONE_TUNING_PARAMETER_COUNT: usize = 40;
 
 const LUMA_RED: f32 = 0.288_040_2;
 const LUMA_GREEN: f32 = 0.711_874_1;
@@ -99,32 +100,318 @@ impl Default for LightRecipe {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ToneTuning {
+    pub global: GlobalToneTuning,
+    pub contrast: ContrastTuning,
+    pub highlights: RangeToneTuning,
+    pub shadows: RangeToneTuning,
+    pub whites: EndpointToneTuning,
+    pub blacks: EndpointToneTuning,
+    pub slider_mapping: SliderMappingTuning,
+}
+
+impl Default for ToneTuning {
+    fn default() -> Self {
+        Self {
+            global: GlobalToneTuning::default(),
+            contrast: ContrastTuning::default(),
+            highlights: RangeToneTuning {
+                start_ev: HIGHLIGHT_ZONE_START_EV,
+                full_ev: HIGHLIGHT_ZONE_FULL_EV,
+                max_lift_ev: HIGHLIGHT_SHADOW_MAX_EV,
+                max_pull_ev: -HIGHLIGHT_SHADOW_MAX_EV,
+                falloff: 1.0,
+                midtone_protection: 0.0,
+                endpoint_protection: 0.0,
+            },
+            shadows: RangeToneTuning {
+                start_ev: -SHADOW_ZONE_START_EV,
+                full_ev: -SHADOW_ZONE_FULL_EV,
+                max_lift_ev: HIGHLIGHT_SHADOW_MAX_EV,
+                max_pull_ev: -HIGHLIGHT_SHADOW_MAX_EV,
+                falloff: 1.0,
+                midtone_protection: 0.0,
+                endpoint_protection: 0.0,
+            },
+            whites: EndpointToneTuning {
+                start_ev: WHITE_ZONE_START_EV,
+                strength: 1.0,
+                max_shift_ev: ENDPOINT_MAX_EV,
+                softness: (WHITE_ZONE_FULL_EV - WHITE_ZONE_START_EV) / ENDPOINT_MAX_EV,
+                protection: 0.0,
+            },
+            blacks: EndpointToneTuning {
+                start_ev: -BLACK_ZONE_START_EV,
+                strength: 1.0,
+                max_shift_ev: ENDPOINT_MAX_EV,
+                softness: (BLACK_ZONE_FULL_EV - BLACK_ZONE_START_EV) / ENDPOINT_MAX_EV,
+                protection: 0.0,
+            },
+            slider_mapping: SliderMappingTuning::default(),
+        }
+    }
+}
+
+impl ToneTuning {
+    pub fn to_floats(self) -> [f32; TONE_TUNING_PARAMETER_COUNT] {
+        [
+            self.global.middle_gray,
+            self.global.base_contrast,
+            self.global.toe_strength,
+            self.global.toe_length_ev,
+            self.global.shoulder_strength,
+            self.global.shoulder_length_ev,
+            self.global.output_soft_clip,
+            self.contrast.max_slope_boost,
+            self.contrast.max_slope_reduction,
+            self.contrast.pivot_min_ev,
+            self.contrast.pivot_max_ev,
+            self.contrast.contrast_softness,
+            self.highlights.start_ev,
+            self.highlights.full_ev,
+            self.highlights.max_lift_ev,
+            self.highlights.max_pull_ev,
+            self.highlights.falloff,
+            self.highlights.midtone_protection,
+            self.highlights.endpoint_protection,
+            self.shadows.start_ev,
+            self.shadows.full_ev,
+            self.shadows.max_lift_ev,
+            self.shadows.max_pull_ev,
+            self.shadows.falloff,
+            self.shadows.midtone_protection,
+            self.shadows.endpoint_protection,
+            self.whites.start_ev,
+            self.whites.strength,
+            self.whites.max_shift_ev,
+            self.whites.softness,
+            self.whites.protection,
+            self.blacks.start_ev,
+            self.blacks.strength,
+            self.blacks.max_shift_ev,
+            self.blacks.softness,
+            self.blacks.protection,
+            self.slider_mapping.near_zero_sensitivity,
+            self.slider_mapping.mid_sensitivity,
+            self.slider_mapping.extreme_taper,
+            self.slider_mapping.dead_zone,
+        ]
+    }
+
+    fn from_floats(parameters: &[f32]) -> Option<Self> {
+        if parameters.len() < TONE_TUNING_PARAMETER_COUNT {
+            return None;
+        }
+
+        Some(Self {
+            global: GlobalToneTuning {
+                middle_gray: parameters[0],
+                base_contrast: parameters[1],
+                toe_strength: parameters[2],
+                toe_length_ev: parameters[3],
+                shoulder_strength: parameters[4],
+                shoulder_length_ev: parameters[5],
+                output_soft_clip: parameters[6],
+            },
+            contrast: ContrastTuning {
+                max_slope_boost: parameters[7],
+                max_slope_reduction: parameters[8],
+                pivot_min_ev: parameters[9],
+                pivot_max_ev: parameters[10],
+                contrast_softness: parameters[11],
+            },
+            highlights: RangeToneTuning {
+                start_ev: parameters[12],
+                full_ev: parameters[13],
+                max_lift_ev: parameters[14],
+                max_pull_ev: parameters[15],
+                falloff: parameters[16],
+                midtone_protection: parameters[17],
+                endpoint_protection: parameters[18],
+            },
+            shadows: RangeToneTuning {
+                start_ev: parameters[19],
+                full_ev: parameters[20],
+                max_lift_ev: parameters[21],
+                max_pull_ev: parameters[22],
+                falloff: parameters[23],
+                midtone_protection: parameters[24],
+                endpoint_protection: parameters[25],
+            },
+            whites: EndpointToneTuning {
+                start_ev: parameters[26],
+                strength: parameters[27],
+                max_shift_ev: parameters[28],
+                softness: parameters[29],
+                protection: parameters[30],
+            },
+            blacks: EndpointToneTuning {
+                start_ev: parameters[31],
+                strength: parameters[32],
+                max_shift_ev: parameters[33],
+                softness: parameters[34],
+                protection: parameters[35],
+            },
+            slider_mapping: SliderMappingTuning {
+                near_zero_sensitivity: parameters[36],
+                mid_sensitivity: parameters[37],
+                extreme_taper: parameters[38],
+                dead_zone: parameters[39],
+            },
+        })
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct GlobalToneTuning {
+    pub middle_gray: f32,
+    pub base_contrast: f32,
+    pub toe_strength: f32,
+    pub toe_length_ev: f32,
+    pub shoulder_strength: f32,
+    pub shoulder_length_ev: f32,
+    pub output_soft_clip: f32,
+}
+
+impl Default for GlobalToneTuning {
+    fn default() -> Self {
+        Self {
+            middle_gray: MIDDLE_GRAY,
+            base_contrast: 1.0,
+            toe_strength: 0.0,
+            toe_length_ev: 2.5,
+            shoulder_strength: 0.0,
+            shoulder_length_ev: 3.0,
+            output_soft_clip: 0.0,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ContrastTuning {
+    pub max_slope_boost: f32,
+    pub max_slope_reduction: f32,
+    pub pivot_min_ev: f32,
+    pub pivot_max_ev: f32,
+    pub contrast_softness: f32,
+}
+
+impl Default for ContrastTuning {
+    fn default() -> Self {
+        Self {
+            max_slope_boost: CONTRAST_MAX_EV,
+            max_slope_reduction: CONTRAST_MAX_EV,
+            pivot_min_ev: PIVOT_EV_MIN,
+            pivot_max_ev: PIVOT_EV_MAX,
+            contrast_softness: CONTRAST_ROLLOFF_EV,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct RangeToneTuning {
+    pub start_ev: f32,
+    pub full_ev: f32,
+    pub max_lift_ev: f32,
+    pub max_pull_ev: f32,
+    pub falloff: f32,
+    pub midtone_protection: f32,
+    pub endpoint_protection: f32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct EndpointToneTuning {
+    pub start_ev: f32,
+    pub strength: f32,
+    pub max_shift_ev: f32,
+    pub softness: f32,
+    pub protection: f32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SliderMappingTuning {
+    pub near_zero_sensitivity: f32,
+    pub mid_sensitivity: f32,
+    pub extreme_taper: f32,
+    pub dead_zone: f32,
+}
+
+impl Default for SliderMappingTuning {
+    fn default() -> Self {
+        Self {
+            near_zero_sensitivity: 0.0,
+            mid_sensitivity: 1.0,
+            extreme_taper: 0.0,
+            dead_zone: 0.0,
+        }
+    }
+}
+
 impl LightRecipe {
     pub fn kernel_parameters(self) -> LightKernelParameters {
+        self.kernel_parameters_with_tuning(ToneTuning::default())
+    }
+
+    pub fn kernel_parameters_with_tuning(self, tuning: ToneTuning) -> LightKernelParameters {
+        let contrast_strength = slider_to_unit(self.contrast_slider, tuning.slider_mapping);
+        let contrast_max_ev = if contrast_strength >= 0.0 {
+            tuning.contrast.max_slope_boost.abs()
+        } else {
+            tuning.contrast.max_slope_reduction.abs()
+        };
+        let highlights_ev = range_slider_to_ev(
+            self.highlights_slider,
+            tuning.highlights,
+            tuning.slider_mapping,
+        );
+        let shadows_ev =
+            range_slider_to_ev(self.shadows_slider, tuning.shadows, tuning.slider_mapping);
+        let whites_ev =
+            endpoint_slider_to_ev_tuned(self.whites_slider, tuning.whites, tuning.slider_mapping);
+        let blacks_ev =
+            endpoint_slider_to_ev_tuned(self.blacks_slider, tuning.blacks, tuning.slider_mapping);
+
         LightKernelParameters {
             exposure_gain: exposure_ev_to_gain(self.exposure_ev),
-            contrast_strength: contrast_slider_to_strength(self.contrast_slider),
-            pivot_ev: sanitize_pivot_ev(self.pivot_ev),
-            highlights_ev: tonal_region_slider_to_ev(self.highlights_slider),
-            shadows_ev: tonal_region_slider_to_ev(self.shadows_slider),
-            whites_ev: endpoint_slider_to_ev(self.whites_slider),
-            blacks_ev: endpoint_slider_to_ev(self.blacks_slider),
-            middle_gray: MIDDLE_GRAY,
+            contrast_strength,
+            pivot_ev: sanitize_pivot_ev_with_tuning(self.pivot_ev, tuning.contrast),
+            highlights_ev,
+            shadows_ev,
+            whites_ev,
+            blacks_ev,
+            middle_gray: tuning.global.middle_gray,
             tone_epsilon: TONE_EPSILON,
             luma_red: LUMA_RED,
             luma_green: LUMA_GREEN,
             luma_blue: LUMA_BLUE,
-            contrast_max_ev: CONTRAST_MAX_EV,
-            contrast_rolloff_ev: CONTRAST_ROLLOFF_EV,
-            shadow_zone_start_ev: SHADOW_ZONE_START_EV,
-            shadow_zone_full_ev: SHADOW_ZONE_FULL_EV,
-            highlight_zone_start_ev: HIGHLIGHT_ZONE_START_EV,
-            highlight_zone_full_ev: HIGHLIGHT_ZONE_FULL_EV,
-            black_zone_start_ev: BLACK_ZONE_START_EV,
-            black_zone_full_ev: BLACK_ZONE_FULL_EV,
-            white_zone_start_ev: WHITE_ZONE_START_EV,
-            white_zone_full_ev: WHITE_ZONE_FULL_EV,
+            contrast_max_ev,
+            contrast_rolloff_ev: tuning.contrast.contrast_softness,
+            shadow_zone_start_ev: tuning.shadows.start_ev.abs(),
+            shadow_zone_full_ev: tuning.shadows.full_ev.abs(),
+            highlight_zone_start_ev: tuning.highlights.start_ev.abs(),
+            highlight_zone_full_ev: tuning.highlights.full_ev.abs(),
+            black_zone_start_ev: tuning.blacks.start_ev.abs(),
+            black_zone_full_ev: endpoint_full_ev(tuning.blacks),
+            white_zone_start_ev: tuning.whites.start_ev.abs(),
+            white_zone_full_ev: endpoint_full_ev(tuning.whites),
             endpoint_max_ev: ENDPOINT_MAX_EV,
+            base_contrast: tuning.global.base_contrast,
+            toe_strength: tuning.global.toe_strength,
+            toe_length_ev: tuning.global.toe_length_ev,
+            shoulder_strength: tuning.global.shoulder_strength,
+            shoulder_length_ev: tuning.global.shoulder_length_ev,
+            output_soft_clip: tuning.global.output_soft_clip,
+            shadow_falloff: tuning.shadows.falloff,
+            shadow_midtone_protection: tuning.shadows.midtone_protection,
+            shadow_endpoint_protection: tuning.shadows.endpoint_protection,
+            highlight_falloff: tuning.highlights.falloff,
+            highlight_midtone_protection: tuning.highlights.midtone_protection,
+            highlight_endpoint_protection: tuning.highlights.endpoint_protection,
+            black_softness: tuning.blacks.softness,
+            black_protection: tuning.blacks.protection,
+            white_softness: tuning.whites.softness,
+            white_protection: tuning.whites.protection,
         }
     }
 
@@ -159,6 +446,22 @@ pub struct LightKernelParameters {
     pub white_zone_start_ev: f32,
     pub white_zone_full_ev: f32,
     pub endpoint_max_ev: f32,
+    pub base_contrast: f32,
+    pub toe_strength: f32,
+    pub toe_length_ev: f32,
+    pub shoulder_strength: f32,
+    pub shoulder_length_ev: f32,
+    pub output_soft_clip: f32,
+    pub shadow_falloff: f32,
+    pub shadow_midtone_protection: f32,
+    pub shadow_endpoint_protection: f32,
+    pub highlight_falloff: f32,
+    pub highlight_midtone_protection: f32,
+    pub highlight_endpoint_protection: f32,
+    pub black_softness: f32,
+    pub black_protection: f32,
+    pub white_softness: f32,
+    pub white_protection: f32,
 }
 
 impl Default for LightKernelParameters {
@@ -193,6 +496,22 @@ impl LightKernelParameters {
             self.white_zone_start_ev,
             self.white_zone_full_ev,
             self.endpoint_max_ev,
+            self.base_contrast,
+            self.toe_strength,
+            self.toe_length_ev,
+            self.shoulder_strength,
+            self.shoulder_length_ev,
+            self.output_soft_clip,
+            self.shadow_falloff,
+            self.shadow_midtone_protection,
+            self.shadow_endpoint_protection,
+            self.highlight_falloff,
+            self.highlight_midtone_protection,
+            self.highlight_endpoint_protection,
+            self.black_softness,
+            self.black_protection,
+            self.white_softness,
+            self.white_protection,
         ]
     }
 
@@ -225,6 +544,22 @@ impl LightKernelParameters {
             white_zone_start_ev: parameters[20],
             white_zone_full_ev: parameters[21],
             endpoint_max_ev: parameters[22],
+            base_contrast: parameters[23],
+            toe_strength: parameters[24],
+            toe_length_ev: parameters[25],
+            shoulder_strength: parameters[26],
+            shoulder_length_ev: parameters[27],
+            output_soft_clip: parameters[28],
+            shadow_falloff: parameters[29],
+            shadow_midtone_protection: parameters[30],
+            shadow_endpoint_protection: parameters[31],
+            highlight_falloff: parameters[32],
+            highlight_midtone_protection: parameters[33],
+            highlight_endpoint_protection: parameters[34],
+            black_softness: parameters[35],
+            black_protection: parameters[36],
+            white_softness: parameters[37],
+            white_protection: parameters[38],
         })
     }
 }
@@ -335,31 +670,47 @@ pub fn apply_darkroom_tonal_curve_v1_z(input_z: f32, parameters: LightKernelPara
         return input_z;
     }
 
-    let mut z = input_z;
+    let mut z = input_z * parameters.base_contrast.max(0.001);
+    z -= parameters.toe_strength.max(0.0)
+        * tone_zone_influence(-z, 0.0, parameters.toe_length_ev, 1.0, 0.0, 0.0);
+    z -= parameters.shoulder_strength.max(0.0)
+        * tone_zone_influence(z, 0.0, parameters.shoulder_length_ev, 1.0, 0.0, 0.0);
 
     z += parameters.shadows_ev
-        * smoothstep(
+        * tone_zone_influence(
+            -z,
             parameters.shadow_zone_start_ev,
             parameters.shadow_zone_full_ev,
-            -z,
+            parameters.shadow_falloff,
+            parameters.shadow_midtone_protection,
+            parameters.shadow_endpoint_protection,
         );
     z += parameters.highlights_ev
-        * smoothstep(
+        * tone_zone_influence(
+            z,
             parameters.highlight_zone_start_ev,
             parameters.highlight_zone_full_ev,
-            z,
+            parameters.highlight_falloff,
+            parameters.highlight_midtone_protection,
+            parameters.highlight_endpoint_protection,
         );
     z += parameters.blacks_ev
-        * smoothstep(
+        * tone_zone_influence(
+            -z,
             parameters.black_zone_start_ev,
             parameters.black_zone_full_ev,
-            -z,
+            1.0,
+            0.0,
+            parameters.black_protection,
         );
     z += parameters.whites_ev
-        * smoothstep(
+        * tone_zone_influence(
+            z,
             parameters.white_zone_start_ev,
             parameters.white_zone_full_ev,
-            z,
+            1.0,
+            0.0,
+            parameters.white_protection,
         );
 
     let centered = z - parameters.pivot_ev;
@@ -367,7 +718,7 @@ pub fn apply_darkroom_tonal_curve_v1_z(input_z: f32, parameters: LightKernelPara
     let contrast_curve = softsign(centered / rolloff);
     z += parameters.contrast_strength * parameters.contrast_max_ev * contrast_curve;
 
-    z
+    soft_clip_z(z, parameters.output_soft_clip)
 }
 
 fn working_luminance(red: f32, green: f32, blue: f32, parameters: LightKernelParameters) -> f32 {
@@ -382,6 +733,62 @@ fn sanitize_pivot_ev(pivot_ev: f32) -> f32 {
     pivot_ev.clamp(PIVOT_EV_MIN, PIVOT_EV_MAX)
 }
 
+fn sanitize_pivot_ev_with_tuning(pivot_ev: f32, tuning: ContrastTuning) -> f32 {
+    if !pivot_ev.is_finite() {
+        return 0.0;
+    }
+
+    let lower = tuning.pivot_min_ev.min(tuning.pivot_max_ev);
+    let upper = tuning.pivot_min_ev.max(tuning.pivot_max_ev);
+    pivot_ev.clamp(lower, upper)
+}
+
+fn slider_to_unit(slider: f32, mapping: SliderMappingTuning) -> f32 {
+    if !slider.is_finite() {
+        return 0.0;
+    }
+
+    let normalized = (slider / 100.0).clamp(-1.0, 1.0);
+    let sign = normalized.signum();
+    let dead_zone = mapping.dead_zone.clamp(0.0, 0.95);
+    let mut magnitude = normalized.abs();
+
+    if magnitude <= dead_zone {
+        return 0.0;
+    }
+
+    magnitude = ((magnitude - dead_zone) / (1.0 - dead_zone)).clamp(0.0, 1.0);
+
+    let smooth = magnitude * magnitude * (3.0 - 2.0 * magnitude);
+    let near = magnitude * mapping.near_zero_sensitivity.max(0.0) * (1.0 - smooth) * 0.5;
+    let mid = smooth * mapping.mid_sensitivity.max(0.0);
+    let tapered = (mid + near) * (1.0 - mapping.extreme_taper.clamp(0.0, 0.95) * smooth * 0.25);
+
+    sign * tapered.clamp(0.0, 1.0)
+}
+
+fn range_slider_to_ev(slider: f32, tuning: RangeToneTuning, mapping: SliderMappingTuning) -> f32 {
+    let unit = slider_to_unit(slider, mapping);
+
+    if unit >= 0.0 {
+        unit * tuning.max_lift_ev.max(0.0)
+    } else {
+        -unit.abs() * tuning.max_pull_ev.abs()
+    }
+}
+
+fn endpoint_slider_to_ev_tuned(
+    slider: f32,
+    tuning: EndpointToneTuning,
+    mapping: SliderMappingTuning,
+) -> f32 {
+    slider_to_unit(slider, mapping) * tuning.max_shift_ev.abs() * tuning.strength.max(0.0)
+}
+
+fn endpoint_full_ev(tuning: EndpointToneTuning) -> f32 {
+    tuning.start_ev.abs() + tuning.max_shift_ev.abs() * tuning.softness.max(0.001)
+}
+
 fn signed_smooth_unit(slider: f32) -> f32 {
     if !slider.is_finite() {
         return 0.0;
@@ -391,6 +798,42 @@ fn signed_smooth_unit(slider: f32) -> f32 {
     let magnitude = normalized.abs();
     let smoothed = magnitude * magnitude * (3.0 - 2.0 * magnitude);
     normalized.signum() * smoothed
+}
+
+fn tone_zone_influence(
+    distance_ev: f32,
+    start_ev: f32,
+    full_ev: f32,
+    falloff: f32,
+    midtone_protection: f32,
+    endpoint_protection: f32,
+) -> f32 {
+    let distance = distance_ev.max(0.0);
+    let start = start_ev.abs().max(0.0);
+    let mut full = full_ev.abs().max(start + 0.001);
+
+    if full <= start {
+        full = start + 0.001;
+    }
+
+    let base = smoothstep(start, full, distance);
+    let shaped = base.powf(1.0 / falloff.clamp(0.1, 4.0));
+    let midtone_guard = 1.0
+        - midtone_protection.clamp(0.0, 0.95) * (1.0 - smoothstep(0.0, start.max(0.001), distance));
+    let endpoint_guard =
+        1.0 - endpoint_protection.clamp(0.0, 0.95) * smoothstep(full, full + 2.0, distance);
+
+    shaped * midtone_guard.clamp(0.05, 1.0) * endpoint_guard.clamp(0.05, 1.0)
+}
+
+fn soft_clip_z(z: f32, amount: f32) -> f32 {
+    let amount = amount.clamp(0.0, 2.0);
+    if amount <= 0.0 {
+        return z;
+    }
+
+    let limit = 16.0 / amount.max(0.001);
+    limit * (z / limit).tanh()
 }
 
 fn smoothstep(edge0: f32, edge1: f32, value: f32) -> f32 {
@@ -432,6 +875,27 @@ pub extern "C" fn darkroom_light_kernel_parameter_count() -> usize {
 }
 
 #[no_mangle]
+pub extern "C" fn darkroom_tone_tuning_parameter_count() -> usize {
+    TONE_TUNING_PARAMETER_COUNT
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn darkroom_light_default_tuning(
+    output_parameters: *mut f32,
+    output_parameter_count: usize,
+) -> u8 {
+    if output_parameters.is_null() || output_parameter_count < TONE_TUNING_PARAMETER_COUNT {
+        return 0;
+    }
+
+    let parameters = ToneTuning::default().to_floats();
+    let output = std::slice::from_raw_parts_mut(output_parameters, output_parameter_count);
+    output[..TONE_TUNING_PARAMETER_COUNT].copy_from_slice(&parameters);
+
+    1
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn darkroom_light_kernel_parameters(
     exposure_ev: f32,
     contrast_slider: f32,
@@ -457,6 +921,48 @@ pub unsafe extern "C" fn darkroom_light_kernel_parameters(
         blacks_slider,
     };
     let parameters = recipe.kernel_parameters().to_floats();
+    let output = std::slice::from_raw_parts_mut(output_parameters, output_parameter_count);
+    output[..LIGHT_KERNEL_PARAMETER_COUNT].copy_from_slice(&parameters);
+
+    1
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn darkroom_light_kernel_parameters_with_tuning(
+    exposure_ev: f32,
+    contrast_slider: f32,
+    pivot_ev: f32,
+    highlights_slider: f32,
+    shadows_slider: f32,
+    whites_slider: f32,
+    blacks_slider: f32,
+    tuning_parameters: *const f32,
+    tuning_parameter_count: usize,
+    output_parameters: *mut f32,
+    output_parameter_count: usize,
+) -> u8 {
+    if output_parameters.is_null()
+        || tuning_parameters.is_null()
+        || output_parameter_count < LIGHT_KERNEL_PARAMETER_COUNT
+        || tuning_parameter_count < TONE_TUNING_PARAMETER_COUNT
+    {
+        return 0;
+    }
+
+    let tuning_slice = std::slice::from_raw_parts(tuning_parameters, TONE_TUNING_PARAMETER_COUNT);
+    let Some(tuning) = ToneTuning::from_floats(tuning_slice) else {
+        return 0;
+    };
+    let recipe = LightRecipe {
+        exposure_ev,
+        contrast_slider,
+        pivot_ev,
+        highlights_slider,
+        shadows_slider,
+        whites_slider,
+        blacks_slider,
+    };
+    let parameters = recipe.kernel_parameters_with_tuning(tuning).to_floats();
     let output = std::slice::from_raw_parts_mut(output_parameters, output_parameter_count);
     output[..LIGHT_KERNEL_PARAMETER_COUNT].copy_from_slice(&parameters);
 
@@ -687,6 +1193,57 @@ mod tests {
     }
 
     #[test]
+    fn default_tuning_preserves_existing_slider_mapping() {
+        let recipe = LightRecipe {
+            highlights_slider: -50.0,
+            shadows_slider: 25.0,
+            whites_slider: 75.0,
+            blacks_slider: -25.0,
+            ..Default::default()
+        };
+        let parameters = recipe.kernel_parameters_with_tuning(ToneTuning::default());
+
+        assert_close(parameters.highlights_ev, -0.9);
+        assert!(parameters.shadows_ev > 0.0);
+        assert!(parameters.whites_ev > 0.0);
+        assert!(parameters.blacks_ev < 0.0);
+        assert_close(parameters.base_contrast, 1.0);
+        assert_close(parameters.toe_strength, 0.0);
+        assert_close(parameters.shoulder_strength, 0.0);
+    }
+
+    #[test]
+    fn custom_tuning_can_expand_highlight_and_shadow_strength() {
+        let mut tuning = ToneTuning::default();
+        tuning.highlights.start_ev = 0.35;
+        tuning.highlights.full_ev = 2.4;
+        tuning.highlights.max_pull_ev = -3.0;
+        tuning.shadows.start_ev = -0.35;
+        tuning.shadows.full_ev = -2.7;
+        tuning.shadows.max_lift_ev = 3.0;
+
+        let default_parameters = LightRecipe {
+            highlights_slider: -100.0,
+            shadows_slider: 100.0,
+            ..Default::default()
+        }
+        .kernel_parameters();
+        let tuned_parameters = LightRecipe {
+            highlights_slider: -100.0,
+            shadows_slider: 100.0,
+            ..Default::default()
+        }
+        .kernel_parameters_with_tuning(tuning);
+
+        assert!(tuned_parameters.highlights_ev < default_parameters.highlights_ev);
+        assert!(tuned_parameters.shadows_ev > default_parameters.shadows_ev);
+        assert!(
+            tuned_parameters.highlight_zone_start_ev < default_parameters.highlight_zone_start_ev
+        );
+        assert!(tuned_parameters.shadow_zone_start_ev < default_parameters.shadow_zone_start_ev);
+    }
+
+    #[test]
     fn light_recipe_applies_exposure_as_real_stops() {
         let recipe = LightRecipe {
             exposure_ev: 1.0,
@@ -833,6 +1390,39 @@ mod tests {
         assert_close(floats[0], 2.0);
         assert_close(floats[1], 1.0);
         assert_close(floats[2], -1.0);
+    }
+
+    #[test]
+    fn c_abi_fills_default_tuning_and_custom_kernel_parameters() {
+        let mut tuning_floats = [0.0_f32; TONE_TUNING_PARAMETER_COUNT];
+        let tuning_succeeded = unsafe {
+            darkroom_light_default_tuning(tuning_floats.as_mut_ptr(), tuning_floats.len())
+        };
+        assert_eq!(tuning_succeeded, 1);
+        assert_close(tuning_floats[0], MIDDLE_GRAY);
+        assert_close(tuning_floats[36], 0.0);
+        assert_close(tuning_floats[37], 1.0);
+
+        tuning_floats[15] = -3.0;
+        let mut kernel_floats = [0.0_f32; LIGHT_KERNEL_PARAMETER_COUNT];
+        let kernel_succeeded = unsafe {
+            darkroom_light_kernel_parameters_with_tuning(
+                0.0,
+                0.0,
+                0.0,
+                -100.0,
+                0.0,
+                0.0,
+                0.0,
+                tuning_floats.as_ptr(),
+                tuning_floats.len(),
+                kernel_floats.as_mut_ptr(),
+                kernel_floats.len(),
+            )
+        };
+
+        assert_eq!(kernel_succeeded, 1);
+        assert_close(kernel_floats[3], -3.0);
     }
 
     #[test]
