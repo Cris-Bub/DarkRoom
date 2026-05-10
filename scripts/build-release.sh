@@ -6,6 +6,7 @@ cd "$ROOT_DIR"
 
 source "$ROOT_DIR/scripts/env.sh"
 
+"$ROOT_DIR/scripts/build-rust-core.sh" release
 "$ROOT_DIR/scripts/generate.sh"
 
 xcodebuild \

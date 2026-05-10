@@ -12,11 +12,15 @@
 
 ## Affords
 
-- Regression coverage for folder scanning models, UI state models, bridge calls, and settings behavior.
+- Regression coverage for folder scanning models, edit recipes, sidecar persistence, color-pipeline policy, shared image rendering, histogram analysis, export writing, RAW decoder contracts, UI state models, bridge calls, and settings behavior.
 
 ## Responsibilities
 
 - Test shell behavior without embedding engine math expectations that belong in Rust.
+- Test Swift rendering for parity-critical behavioral guarantees such as ordered tonal gradients after extreme light edits.
+- Test histogram analysis with generated fixtures for channel bins, clipping indicators, and recipe-driven changes.
+- Test color-management value objects and decoder interfaces without requiring a user's real photo library.
+- Test export and image-pipeline behavior with generated temporary fixtures, not user photos.
 - Keep tests small and deterministic.
 - Avoid tests that need a user's real photo folders.
 
@@ -27,4 +31,4 @@
 
 ## Update Triggers
 
-Update when Swift test ownership, fixture strategy, or bridge test policy changes.
+Update when Swift test ownership, color-pipeline fixture strategy, RAW decoder test policy, or bridge test policy changes.

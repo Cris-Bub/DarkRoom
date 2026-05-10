@@ -5,6 +5,9 @@ struct DRAdjustmentSlider: View {
 
     @Binding var value: Double
     let range: ClosedRange<Double>
+    var onEditingChanged: (Bool) -> Void = { _ in }
+
+    @State private var isDragging = false
 
     private let trackHeight: CGFloat = 3
     private let knobSize: CGFloat = 22
@@ -38,9 +41,22 @@ struct DRAdjustmentSlider: View {
                                     return
                                 }
 
+                                if !isDragging {
+                                    isDragging = true
+                                    onEditingChanged(true)
+                                }
+
                                 let clampedX = min(max(drag.location.x, knobSize / 2), width - knobSize / 2)
                                 let nextProgress = (clampedX - knobSize / 2) / max(width - knobSize, 1)
                                 value = range.lowerBound + (range.upperBound - range.lowerBound) * nextProgress
+                            }
+                            .onEnded { _ in
+                                guard isDragging else {
+                                    return
+                                }
+
+                                isDragging = false
+                                onEditingChanged(false)
                             }
                     )
             }

@@ -1,6 +1,6 @@
 # Design System
 
-DarkRoom should feel like a quiet native macOS photo grading workstation: neutral, precise, dense enough for repeated professional use, and visually subordinate to the image. The interface should not feel like a marketing page, a generic dashboard, or a playful consumer editor. It should feel calm, fast, and deliberate.
+DarkRoom should feel like a quiet minimalist beautiful sleek native macOS photo grading workstation: neutral, precise, dense enough for repeated professional use, and visually subordinate to the image. The interface should not feel like a marketing page, a generic dashboard, or a playful consumer editor. It should feel calm, fast, and deliberate.
 
 ## Design Language Statement
 
@@ -57,13 +57,13 @@ Molecules combine atoms into reusable control groups.
 
 Current molecules:
 
-- `DRCollapsibleSection`: Lightroom-like disclosure section for inspector groups.
-- `DRAdjustmentRow`: label, value, and custom adjustment slider.
+- `DRCollapsibleSection`: Lightroom-like disclosure section for inspector groups, with optional feature-supplied header reset actions.
+- `DRAdjustmentRow`: label, clickable bounded value entry, and custom adjustment slider.
 - `DRAdjustmentSlider`: horizontal adjustment control with a bordered circular knob whose fill matches the inspector surface.
 
 Candidate molecules:
 
-- Background picker row.
+- Viewer proof/background picker row.
 - Image metadata summary.
 - Scope panel header with mode selector.
 
@@ -76,6 +76,8 @@ Current organisms:
 - Sidebar image browser.
 - Viewer pane.
 - Inspector pane with edit/crop/mask rail and subtle image details panel.
+- Inspector histogram with overlapping luminance/RGB channels and shadow/highlight clipping indicators.
+- Toolbar export action with compact progress/status feedback.
 
 Candidate organisms:
 
@@ -138,6 +140,14 @@ When changing UI:
 
 The inspector uses a right-side mode rail for major editing pages. `Edit` is the default page; `Crop` and `Mask` are placeholders until those tools exist. Image details do not belong inside edit-control sections. They are revealed from the bottom rail info button and shown as a small, low-prominence panel so metadata does not compete with editing controls.
 
-Edit sections should be collapsible. Adjustment sliders use subdued labels and numeric values with a circular knob: bordered, light stroke, and filled with the local inspector background so the handle reads like a control rather than a filled badge.
+The inspector histogram sits above the edit controls. The body is drawn as a per-bin stack that goes gray where all three RGB channels overlap, fades to a muted yellow/cyan/magenta where two channels overlap, and reaches a muted single-channel color where only one channel reaches that height. Pure channel color is reserved for the thin top outlines and the small top-corner clipping indicators. The histogram should reflect the current edited image and selected `View As` target rather than source-only pixels, and it should keep the previous graph visible while live slider updates render.
+
+The Viewer section uses `View As` for output proofing language. It should avoid lower-level wording like "display profile" because the physical display profile is an implementation detail, not the creative/output target the user is choosing.
+
+Edit sections should be collapsible. V1 tonal controls are Exposure, Contrast, Pivot, Highlights, Shadows, Whites, and Blacks. Adjustment sliders use subdued labels and numeric values with a circular knob: bordered, light stroke, and filled with the local inspector background so the handle reads like a control rather than a filled badge. Numeric value readouts should be clickable and temporarily become compact entry fields that clamp to the same bounds as the slider. Sliders and numeric entry should surface active editing state to feature code so viewer previews can switch into a faster interactive render mode while edits are in progress. Tooltips should be plain-language descriptions of the tonal intent, not implementation terms.
+
+Edit and developer-tuning sections may expose section-level resets from the collapsible header. The reusable component owns only the small reset icon and matching context-menu affordance; the feature module decides which fields reset and when the action is disabled.
 
 Editing controls must visibly enter a read-only state when no selected image has a rendered preview for the current display. The disabled state should preserve layout and hierarchy, but reduce contrast enough that users do not mistake unavailable controls for active grading state.
+
+Export should stay quiet and native at V1: a toolbar action opens the macOS save panel, reuses the current `View As` output target, and shows compact status instead of introducing a large custom export surface before presets, resizing, metadata policy, or batch behavior exist.

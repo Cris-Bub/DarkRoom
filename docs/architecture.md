@@ -25,7 +25,7 @@ Rust owns the testable and portable parts:
 - Preset and sidecar schemas.
 - CPU reference implementations used to validate GPU behavior.
 
-The first crate is `darkroom_core`, which currently provides reference light-control math.
+The first crate is `darkroom_core`, which currently provides reference tonal math and a small C ABI used by the macOS target for V1 tone parameter mapping.
 
 ### Platform Imaging
 

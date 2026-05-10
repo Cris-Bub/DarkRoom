@@ -13,6 +13,7 @@
 ## Affords
 
 - Predictable setup, health check, generate, build, run, test, format, lint, package, and clean commands.
+- A Rust-core build entrypoint that produces the static library linked by the macOS app.
 - A single place to hide tool-specific command details from README and agents.
 - A shared environment shim that points scripts at full Xcode when `/Applications/Xcode.app` exists.
 
@@ -22,6 +23,7 @@
 - Fail with actionable messages.
 - Avoid global system changes unless clearly confirmed by the user outside the script.
 - Source `scripts/env.sh` from scripts that need Apple developer tools.
+- Build the Rust core before Swift build/test commands that link against it.
 - Regenerate the Tuist workspace before Swift build/test commands so new source files are included.
 
 ## Boundaries
@@ -31,4 +33,4 @@
 
 ## Update Triggers
 
-Update when required tooling, build products, workspace names, schemes, or test commands change.
+Update when required tooling, Rust library linkage, build products, workspace names, schemes, or test commands change.

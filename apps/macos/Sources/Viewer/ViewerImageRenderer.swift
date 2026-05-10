@@ -1,126 +1,126 @@
 import AppKit
-import CoreImage
-import ImageIO
 
 enum ViewerImageRenderer {
-    static func render(url: URL, displayProfile: ViewerDisplayProfile) throws -> RenderedViewerImage {
-        if LocalImageFile.isRaw(url: url), let rawImage = try renderRawImageIfAvailable(url: url, displayProfile: displayProfile) {
-            return rawImage
-        }
+    static func prepareSource(
+        url: URL,
+        rawBaseline: RawBaseline = .darkRoomStandard,
+        rawDecoder: any RawDecoder = AppleRawDecoder()
+    ) throws -> PreparedViewerSource {
+        let preparedSource = try ImagePipelineRenderer.prepareSource(
+            url: url,
+            rawBaseline: rawBaseline,
+            rawDecoder: rawDecoder
+        )
 
-        return try renderImageIOImage(url: url, displayProfile: displayProfile)
+        return PreparedViewerSource(pipelineSource: preparedSource)
     }
 
-    private static func renderRawImageIfAvailable(url: URL, displayProfile: ViewerDisplayProfile) throws -> RenderedViewerImage? {
-        guard let rawFilter = CIRAWFilter(imageURL: url) else {
-            return nil
-        }
-
-        rawFilter.isDraftModeEnabled = false
-        rawFilter.scaleFactor = 1
-        rawFilter.isGamutMappingEnabled = true
-        rawFilter.extendedDynamicRangeAmount = 0
-
-        if rawFilter.isLensCorrectionSupported {
-            rawFilter.isLensCorrectionEnabled = true
-        }
-
-        guard let outputImage = rawFilter.outputImage else {
-            throw ViewerRenderError.unableToDecode(url.lastPathComponent)
-        }
-
-        let cgImage = try render(
-            outputImage,
-            displayProfile: displayProfile,
-            fallbackColorSpace: CGColorSpace(name: CGColorSpace.extendedLinearDisplayP3)
-        )
-
-        return RenderedViewerImage(
-            cgImage: cgImage,
-            sourceKind: .raw,
-            displayProfileName: displayProfile.displayName
-        )
-    }
-
-    private static func renderImageIOImage(url: URL, displayProfile: ViewerDisplayProfile) throws -> RenderedViewerImage {
-        let options = [
-            kCGImageSourceShouldCache: true,
-            kCGImageSourceShouldCacheImmediately: true
-        ] as CFDictionary
-
-        guard let source = CGImageSourceCreateWithURL(url as CFURL, options),
-              let cgImage = CGImageSourceCreateImageAtIndex(source, 0, options) else {
-            throw ViewerRenderError.unableToDecode(url.lastPathComponent)
-        }
-
-        let sourceColorSpace = cgImage.colorSpace ?? CGColorSpace(name: CGColorSpace.sRGB)!
-        var ciImage = CIImage(cgImage: cgImage, options: [.colorSpace: sourceColorSpace as Any])
-
-        if let orientation = imageOrientation(from: source) {
-            ciImage = ciImage.oriented(forExifOrientation: Int32(orientation))
-        }
-
-        let renderedImage = try render(
-            ciImage,
-            displayProfile: displayProfile,
-            fallbackColorSpace: sourceColorSpace
-        )
-
-        return RenderedViewerImage(
-            cgImage: renderedImage,
-            sourceKind: .raster,
-            displayProfileName: displayProfile.displayName
-        )
-    }
-
-    private static func render(
-        _ image: CIImage,
+    static func render(
+        url: URL,
         displayProfile: ViewerDisplayProfile,
-        fallbackColorSpace: CGColorSpace?
-    ) throws -> CGImage {
-        let workingColorSpace = CGColorSpace(name: CGColorSpace.extendedLinearDisplayP3)
-            ?? fallbackColorSpace
-            ?? displayProfile.colorSpace
+        previewTarget: PreviewTarget,
+        editRecipe: EditRecipe = .neutral,
+        toneTuning: ToneTuning = .defaultV1,
+        toneOverlay: ToneRangeOverlay = .off,
+        maximumPixelSize: CGSize? = nil,
+        rawBaseline: RawBaseline = .darkRoomStandard,
+        rawDecoder: any RawDecoder = AppleRawDecoder(),
+        contextProvider: ImagePipelineRenderContextProvider = .shared
+    ) throws -> RenderedViewerImage {
+        let renderedImage = try ImagePipelineRenderer.renderDisplayPreview(
+            url: url,
+            displayColorSpace: displayProfile.colorSpace,
+            displayProfileName: displayProfile.displayName,
+            previewTarget: previewTarget,
+            editRecipe: editRecipe,
+            toneTuning: toneTuning,
+            toneOverlay: toneOverlay,
+            maximumPixelSize: maximumPixelSize,
+            rawBaseline: rawBaseline,
+            rawDecoder: rawDecoder,
+            contextProvider: contextProvider
+        )
 
-        let context = CIContext(options: [
-            .workingColorSpace: workingColorSpace,
-            .outputColorSpace: displayProfile.colorSpace,
-            .workingFormat: CIFormat.RGBAh
-        ])
-
-        let extent = image.extent.integral
-        guard !extent.isEmpty,
-              let cgImage = context.createCGImage(
-                image,
-                from: extent,
-                format: .RGBA16,
-                colorSpace: displayProfile.colorSpace
-              ) else {
-            throw ViewerRenderError.unableToRender
-        }
-
-        return cgImage
+        return renderedViewerImage(
+            from: renderedImage,
+            fallbackDisplayProfileName: displayProfile.displayName
+        )
     }
 
-    private static func imageOrientation(from source: CGImageSource) -> Int? {
-        guard let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
-              let orientation = properties[kCGImagePropertyOrientation] as? Int else {
-            return nil
-        }
+    static func render(
+        preparedSource: PreparedViewerSource,
+        displayProfile: ViewerDisplayProfile,
+        previewTarget: PreviewTarget,
+        editRecipe: EditRecipe = .neutral,
+        toneTuning: ToneTuning = .defaultV1,
+        toneOverlay: ToneRangeOverlay = .off,
+        maximumPixelSize: CGSize? = nil,
+        contextProvider: ImagePipelineRenderContextProvider = .shared
+    ) throws -> RenderedViewerImage {
+        let renderedImage = try ImagePipelineRenderer.renderDisplayPreview(
+            preparedSource: preparedSource.pipelineSource,
+            displayColorSpace: displayProfile.colorSpace,
+            displayProfileName: displayProfile.displayName,
+            previewTarget: previewTarget,
+            editRecipe: editRecipe,
+            toneTuning: toneTuning,
+            toneOverlay: toneOverlay,
+            maximumPixelSize: maximumPixelSize,
+            contextProvider: contextProvider
+        )
 
-        return orientation
+        return renderedViewerImage(
+            from: renderedImage,
+            fallbackDisplayProfileName: displayProfile.displayName
+        )
     }
+
+    private static func renderedViewerImage(
+        from renderedImage: PipelineRenderedImage,
+        fallbackDisplayProfileName: String
+    ) -> RenderedViewerImage {
+        return RenderedViewerImage(
+            cgImage: renderedImage.cgImage,
+            sourceKind: ViewerSourceKind(pipelineSourceKind: renderedImage.sourceKind),
+            sourceProfileName: renderedImage.sourceProfileName,
+            sourceProfileWasAssumed: renderedImage.sourceProfileWasAssumed,
+            previewTarget: renderedImage.previewTarget,
+            rawBaseline: renderedImage.rawBaseline,
+            editRecipe: renderedImage.editRecipe,
+            workingColorSpaceName: renderedImage.workingColorSpaceName,
+            displayProfileName: renderedImage.displayProfileName ?? fallbackDisplayProfileName
+        )
+    }
+}
+
+struct PreparedViewerSource: @unchecked Sendable {
+    fileprivate let pipelineSource: PipelinePreparedSource
 }
 
 struct RenderedViewerImage: @unchecked Sendable {
     let cgImage: CGImage
     let sourceKind: ViewerSourceKind
+    let sourceProfileName: String
+    let sourceProfileWasAssumed: Bool
+    let previewTarget: PreviewTarget
+    let rawBaseline: RawBaseline?
+    let editRecipe: EditRecipe
+    let workingColorSpaceName: String
     let displayProfileName: String
 }
 
-enum ViewerSourceKind: Sendable {
+enum ViewerSourceKind: Sendable, Equatable {
     case raw
     case raster
+
+    init(pipelineSourceKind: PipelineSourceKind) {
+        switch pipelineSourceKind {
+        case .raw:
+            self = .raw
+        case .raster:
+            self = .raster
+        }
+    }
 }
 
 enum ViewerRenderError: LocalizedError {

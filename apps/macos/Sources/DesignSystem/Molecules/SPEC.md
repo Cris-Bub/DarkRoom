@@ -12,11 +12,16 @@
 ## Affords
 
 - Repeated inspector control groups such as collapsible sections and adjustment rows.
+- Collapsible section headers with optional feature-supplied reset actions, exposed as compact icon buttons and context-menu items.
+- Adjustment rows and sliders that can report active drag or numeric-entry state to feature modules for interactive preview scheduling and carry plain-language help text.
+- Clickable adjustment values that temporarily become bounded numeric entry fields.
 
 ## Responsibilities
 
 - Keep molecules presentational or narrowly interactive.
 - Accept data and bindings from feature modules instead of owning feature state.
+- Surface generic interaction lifecycle callbacks, reset affordances, disabled states, and help text without knowing what the feature does with them.
+- Clamp direct numeric entry through the same range supplied to the slider.
 
 ## Boundaries
 

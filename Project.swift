@@ -25,7 +25,11 @@ let project = Project(
                 "NSPhotoLibraryUsageDescription": "DarkRoom reads selected local image folders for non-destructive photo grading."
             ]),
             sources: ["apps/macos/Sources/**"],
-            resources: ["apps/macos/Resources/**"]
+            resources: ["apps/macos/Resources/**"],
+            settings: .settings(base: [
+                "LIBRARY_SEARCH_PATHS": "$(inherited) $(SRCROOT)/target/debug $(SRCROOT)/target/release",
+                "OTHER_LDFLAGS": "$(inherited) -ldarkroom_core"
+            ])
         ),
         .target(
             name: "DarkRoomTests",

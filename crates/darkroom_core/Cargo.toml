@@ -7,3 +7,4 @@ license.workspace = true
 [lib]
 name = "darkroom_core"
 path = "src/lib.rs"
+crate-type = ["rlib", "staticlib"]

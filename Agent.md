@@ -59,6 +59,7 @@ Use scripts instead of hidden IDE steps:
 ```
 
 If a task is required to develop the app and no script exists, add or document one.
+When Rust symbols are consumed by Swift, verify both sides with `./scripts/test-rust.sh` and `./scripts/test-swift.sh`; the Swift build scripts compile the linked `darkroom_core` static library first.
 
 ## Generated Files
 

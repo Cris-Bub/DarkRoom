@@ -2,8 +2,13 @@ import SwiftUI
 
 struct InspectorView: View {
     let selectedFile: LocalImageFile?
+    @Binding var previewTarget: PreviewTarget
     @Binding var viewerBackground: ViewerBackground
+    @Binding var editRecipe: EditRecipe
+    let histogramStatus: HistogramStatus
     let isReadOnly: Bool
+    var onAdjustmentEditingChanged: (Bool) -> Void = { _ in }
+    let onResetEdits: () -> Void
 
     @State private var selectedMode: InspectorMode = .edit
     @State private var showsImageDetails = false
@@ -11,12 +16,6 @@ struct InspectorView: View {
     @State private var viewerExpanded = true
     @State private var lightExpanded = true
     @State private var curveExpanded = true
-    @State private var exposure = 0.0
-    @State private var contrast = 0.0
-    @State private var highlights = 0.0
-    @State private var shadows = 0.0
-    @State private var whites = 0.0
-    @State private var blacks = 0.0
 
     var body: some View {
         HStack(spacing: 0) {
@@ -53,6 +52,8 @@ struct InspectorView: View {
     private var editPage: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
+                InspectorHistogramView(status: histogramStatus)
+
                 Text("Edit")
                     .font(DarkRoomDesign.Typography.inspectorTitle)
                     .foregroundStyle(DarkRoomDesign.Palette.primaryText)
@@ -77,7 +78,21 @@ struct InspectorView: View {
                     }
                 }
 
-                DRCollapsibleSection("Viewer", systemImage: "rectangle.dashed", isExpanded: $viewerExpanded) {
+                DRCollapsibleSection(
+                    "Viewer",
+                    systemImage: "rectangle.dashed",
+                    isExpanded: $viewerExpanded,
+                    resetTitle: "Reset Viewer",
+                    isResetDisabled: previewTarget == .webInstagram && viewerBackground == .darkGray,
+                    onReset: resetViewerSection
+                ) {
+                    Picker("View As", selection: $previewTarget) {
+                        ForEach(PreviewTarget.allCases) { target in
+                            Text(target.label).tag(target)
+                        }
+                    }
+                    .pickerStyle(.menu)
+
                     Picker("Background", selection: $viewerBackground) {
                         ForEach(ViewerBackground.allCases) { background in
                             Text(background.label).tag(background)
@@ -86,47 +101,75 @@ struct InspectorView: View {
                     .pickerStyle(.menu)
                 }
 
-                DRCollapsibleSection("Light", systemImage: "sun.max", isExpanded: $lightExpanded) {
+                DRCollapsibleSection(
+                    "Light",
+                    systemImage: "sun.max",
+                    isExpanded: $lightExpanded,
+                    resetTitle: "Reset Light",
+                    isResetDisabled: editRecipe.isNeutral,
+                    onReset: onResetEdits
+                ) {
                     DRAdjustmentRow(
                         title: "Exposure",
-                        value: $exposure,
-                        range: -5...5,
-                        displayValue: signedValue(exposure, fractionDigits: 2)
+                        value: $editRecipe.light.exposureEV,
+                        range: LightAdjustments.exposureRange,
+                        displayValue: signedValue(editRecipe.light.exposureEV, fractionDigits: 2),
+                        helpText: "Changes brightness in real stops before the image is tone-mapped.",
+                        onEditingChanged: onAdjustmentEditingChanged
                     )
 
                     DRAdjustmentRow(
                         title: "Contrast",
-                        value: $contrast,
-                        range: -100...100,
-                        displayValue: signedValue(contrast)
+                        value: $editRecipe.light.contrast,
+                        range: LightAdjustments.contrastRange,
+                        displayValue: signedValue(editRecipe.light.contrast),
+                        helpText: "Changes midtone separation while keeping the toe and shoulder smooth.",
+                        onEditingChanged: onAdjustmentEditingChanged
+                    )
+
+                    DRAdjustmentRow(
+                        title: "Pivot",
+                        value: $editRecipe.light.pivotEV,
+                        range: LightAdjustments.pivotRange,
+                        displayValue: signedValue(editRecipe.light.pivotEV, fractionDigits: 2),
+                        helpText: "Moves the tonal balance point for contrast.",
+                        onEditingChanged: onAdjustmentEditingChanged
                     )
 
                     DRAdjustmentRow(
                         title: "Highlights",
-                        value: $highlights,
-                        range: -100...100,
-                        displayValue: signedValue(highlights)
+                        value: $editRecipe.light.highlights,
+                        range: LightAdjustments.highlightsRange,
+                        displayValue: signedValue(editRecipe.light.highlights),
+                        helpText: "Shapes bright detail without acting as RAW highlight reconstruction.",
+                        onEditingChanged: onAdjustmentEditingChanged
                     )
 
                     DRAdjustmentRow(
                         title: "Shadows",
-                        value: $shadows,
-                        range: -100...100,
-                        displayValue: signedValue(shadows)
+                        value: $editRecipe.light.shadows,
+                        range: LightAdjustments.shadowsRange,
+                        displayValue: signedValue(editRecipe.light.shadows),
+                        helpText: "Opens or deepens darker tones with soft falloff.",
+                        onEditingChanged: onAdjustmentEditingChanged
                     )
 
                     DRAdjustmentRow(
                         title: "Whites",
-                        value: $whites,
-                        range: -100...100,
-                        displayValue: signedValue(whites)
+                        value: $editRecipe.light.whites,
+                        range: LightAdjustments.whitesRange,
+                        displayValue: signedValue(editRecipe.light.whites),
+                        helpText: "Controls how the image approaches white.",
+                        onEditingChanged: onAdjustmentEditingChanged
                     )
 
                     DRAdjustmentRow(
                         title: "Blacks",
-                        value: $blacks,
-                        range: -100...100,
-                        displayValue: signedValue(blacks)
+                        value: $editRecipe.light.blacks,
+                        range: LightAdjustments.blacksRange,
+                        displayValue: signedValue(editRecipe.light.blacks),
+                        helpText: "Controls how the image approaches black.",
+                        onEditingChanged: onAdjustmentEditingChanged
                     )
                 }
 
@@ -278,6 +321,11 @@ struct InspectorView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(DarkRoomDesign.Spacing.large)
         .opacity(isReadOnly ? 0.46 : 1)
+    }
+
+    private func resetViewerSection() {
+        previewTarget = .webInstagram
+        viewerBackground = .darkGray
     }
 
     private func signedValue(_ value: Double, fractionDigits: Int = 0) -> String {
