@@ -22,6 +22,7 @@ enum ImagePipelineRenderer {
         previewTarget: PreviewTarget,
         editRecipe: EditRecipe,
         toneTuning: ToneTuning = .defaultV1,
+        behaviorTuning: BehaviorTuning? = nil,
         toneOverlay: ToneRangeOverlay = .off,
         maximumPixelSize: CGSize? = nil,
         rawBaseline: RawBaseline = .darkRoomStandard,
@@ -41,6 +42,7 @@ enum ImagePipelineRenderer {
             previewTarget: previewTarget,
             editRecipe: editRecipe,
             toneTuning: toneTuning,
+            behaviorTuning: behaviorTuning,
             toneOverlay: toneOverlay,
             maximumPixelSize: maximumPixelSize,
             contextProvider: contextProvider
@@ -54,6 +56,7 @@ enum ImagePipelineRenderer {
         previewTarget: PreviewTarget,
         editRecipe: EditRecipe,
         toneTuning: ToneTuning = .defaultV1,
+        behaviorTuning: BehaviorTuning? = nil,
         toneOverlay: ToneRangeOverlay = .off,
         maximumPixelSize: CGSize? = nil,
         contextProvider: ImagePipelineRenderContextProvider = .shared
@@ -63,6 +66,7 @@ enum ImagePipelineRenderer {
             editRecipe,
             to: previewSourceImage,
             toneTuning: toneTuning,
+            behaviorTuning: behaviorTuning,
             overlay: toneOverlay
         )
         let proofedImage = try proof(
@@ -105,6 +109,7 @@ enum ImagePipelineRenderer {
         outputTarget: PreviewTarget,
         editRecipe: EditRecipe,
         toneTuning: ToneTuning = .defaultV1,
+        behaviorTuning: BehaviorTuning? = nil,
         outputFormat: CIFormat,
         rawBaseline: RawBaseline = .darkRoomStandard,
         rawDecoder: any RawDecoder = AppleRawDecoder(),
@@ -118,7 +123,8 @@ enum ImagePipelineRenderer {
         let editedImage = try EditRecipeRenderer.apply(
             editRecipe,
             to: source.image,
-            toneTuning: toneTuning
+            toneTuning: toneTuning,
+            behaviorTuning: behaviorTuning
         )
         let outputImage = try proof(
             editedImage,
@@ -145,6 +151,7 @@ enum ImagePipelineRenderer {
         previewTarget: PreviewTarget,
         editRecipe: EditRecipe,
         toneTuning: ToneTuning = .defaultV1,
+        behaviorTuning: BehaviorTuning? = nil,
         maximumPixelSize: CGSize = CGSize(width: 256, height: 256),
         rawBaseline: RawBaseline = .darkRoomStandard,
         rawDecoder: any RawDecoder = AppleRawDecoder(),
@@ -161,6 +168,7 @@ enum ImagePipelineRenderer {
             previewTarget: previewTarget,
             editRecipe: editRecipe,
             toneTuning: toneTuning,
+            behaviorTuning: behaviorTuning,
             maximumPixelSize: maximumPixelSize,
             contextProvider: contextProvider
         )
@@ -171,6 +179,7 @@ enum ImagePipelineRenderer {
         previewTarget: PreviewTarget,
         editRecipe: EditRecipe,
         toneTuning: ToneTuning = .defaultV1,
+        behaviorTuning: BehaviorTuning? = nil,
         maximumPixelSize: CGSize = CGSize(width: 256, height: 256),
         contextProvider: ImagePipelineRenderContextProvider = .shared
     ) throws -> PipelineRenderedImage {
@@ -178,7 +187,8 @@ enum ImagePipelineRenderer {
         let editedImage = try EditRecipeRenderer.apply(
             editRecipe,
             to: previewSourceImage,
-            toneTuning: toneTuning
+            toneTuning: toneTuning,
+            behaviorTuning: behaviorTuning
         )
         let outputImage = try proof(
             editedImage,

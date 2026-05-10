@@ -25,7 +25,7 @@
 - Keep file writing and save-panel export flow in `Exporting/`.
 - Keep RAW decoder swappability in `RawDecoding/`.
 - Keep preview render-readiness in the viewer layer so inspector controls can reflect whether a trustworthy preview exists.
-- Keep developer-only tone tuning UI in `ToneLab/`, separate from persisted user edit recipes.
+- Keep developer-only behavior tuning UI in `ToneLab/`, separate from persisted user edit recipes.
 - Keep future engine bridge calls isolated from presentation views.
 - Keep current Rust C ABI calls wrapped in feature/model layers, not presentation views.
 - Route repeated visual decisions through `DesignSystem/` instead of duplicating local styling.

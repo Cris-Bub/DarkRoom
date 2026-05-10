@@ -8,6 +8,7 @@ struct ViewerMetalImageView: NSViewRepresentable {
     let previewTarget: PreviewTarget
     let editRecipe: EditRecipe
     var toneTuning: ToneTuning = .defaultV1
+    var behaviorTuning: BehaviorTuning?
     var toneOverlay: ToneRangeOverlay = .off
     let displayProfile: ViewerDisplayProfile
     let isInteractiveEditing: Bool
@@ -36,6 +37,7 @@ struct ViewerMetalImageView: NSViewRepresentable {
             previewTarget: previewTarget,
             editRecipe: editRecipe,
             toneTuning: toneTuning,
+            behaviorTuning: behaviorTuning,
             toneOverlay: toneOverlay,
             displayProfile: displayProfile,
             isInteractiveEditing: isInteractiveEditing,
@@ -57,6 +59,7 @@ struct ViewerMetalImageView: NSViewRepresentable {
         private var previewTarget: PreviewTarget = .webInstagram
         private var editRecipe: EditRecipe = .neutral
         private var toneTuning: ToneTuning = .defaultV1
+        private var behaviorTuning: BehaviorTuning?
         private var toneOverlay: ToneRangeOverlay = .off
         private var displayProfile = ViewerDisplayProfile.current()
         private var isInteractiveEditing = false
@@ -85,6 +88,7 @@ struct ViewerMetalImageView: NSViewRepresentable {
             previewTarget: PreviewTarget,
             editRecipe: EditRecipe,
             toneTuning: ToneTuning,
+            behaviorTuning: BehaviorTuning?,
             toneOverlay: ToneRangeOverlay,
             displayProfile: ViewerDisplayProfile,
             isInteractiveEditing: Bool,
@@ -95,6 +99,7 @@ struct ViewerMetalImageView: NSViewRepresentable {
                 self.previewTarget = previewTarget
                 self.editRecipe = editRecipe
                 self.toneTuning = toneTuning
+                self.behaviorTuning = behaviorTuning
                 self.toneOverlay = toneOverlay
                 self.displayProfile = displayProfile
                 self.isInteractiveEditing = isInteractiveEditing
@@ -204,6 +209,7 @@ struct ViewerMetalImageView: NSViewRepresentable {
                     previewTarget: self.previewTarget,
                     editRecipe: self.editRecipe,
                     toneTuning: self.toneTuning,
+                    behaviorTuning: self.behaviorTuning,
                     toneOverlay: self.toneOverlay,
                     displayColorSpace: self.displayProfile.colorSpace,
                     drawableBounds: CGRect(origin: .zero, size: drawableSize),
@@ -248,6 +254,7 @@ struct ViewerMetalImageView: NSViewRepresentable {
                 state.editRecipe,
                 to: workingSizedImage,
                 toneTuning: state.toneTuning,
+                behaviorTuning: state.behaviorTuning,
                 overlay: state.toneOverlay
             )
 
@@ -292,6 +299,7 @@ private struct RenderState {
     let previewTarget: PreviewTarget
     let editRecipe: EditRecipe
     let toneTuning: ToneTuning
+    let behaviorTuning: BehaviorTuning?
     let toneOverlay: ToneRangeOverlay
     let displayColorSpace: CGColorSpace
     let drawableBounds: CGRect

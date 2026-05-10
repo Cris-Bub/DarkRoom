@@ -21,6 +21,7 @@ enum ViewerImageRenderer {
         previewTarget: PreviewTarget,
         editRecipe: EditRecipe = .neutral,
         toneTuning: ToneTuning = .defaultV1,
+        behaviorTuning: BehaviorTuning? = nil,
         toneOverlay: ToneRangeOverlay = .off,
         maximumPixelSize: CGSize? = nil,
         rawBaseline: RawBaseline = .darkRoomStandard,
@@ -34,6 +35,7 @@ enum ViewerImageRenderer {
             previewTarget: previewTarget,
             editRecipe: editRecipe,
             toneTuning: toneTuning,
+            behaviorTuning: behaviorTuning,
             toneOverlay: toneOverlay,
             maximumPixelSize: maximumPixelSize,
             rawBaseline: rawBaseline,
@@ -53,6 +55,7 @@ enum ViewerImageRenderer {
         previewTarget: PreviewTarget,
         editRecipe: EditRecipe = .neutral,
         toneTuning: ToneTuning = .defaultV1,
+        behaviorTuning: BehaviorTuning? = nil,
         toneOverlay: ToneRangeOverlay = .off,
         maximumPixelSize: CGSize? = nil,
         contextProvider: ImagePipelineRenderContextProvider = .shared
@@ -64,6 +67,7 @@ enum ViewerImageRenderer {
             previewTarget: previewTarget,
             editRecipe: editRecipe,
             toneTuning: toneTuning,
+            behaviorTuning: behaviorTuning,
             toneOverlay: toneOverlay,
             maximumPixelSize: maximumPixelSize,
             contextProvider: contextProvider

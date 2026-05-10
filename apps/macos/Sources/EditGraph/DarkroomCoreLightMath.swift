@@ -9,10 +9,27 @@ enum DarkroomCoreLightMath {
         Int(darkroomToneTuningParameterCount())
     }
 
+    static var behaviorTuningParameterCount: Int {
+        Int(darkroomBehaviorTuningParameterCount())
+    }
+
     static func defaultToneTuningParameters() -> [Float] {
         var parameters = [Float](repeating: 0, count: toneTuningParameterCount)
         let result = parameters.withUnsafeMutableBufferPointer { buffer in
             darkroomLightDefaultTuning(buffer.baseAddress, buffer.count)
+        }
+
+        guard result == 1 else {
+            return []
+        }
+
+        return parameters
+    }
+
+    static func defaultBehaviorTuningParameters() -> [Float] {
+        var parameters = [Float](repeating: 0, count: behaviorTuningParameterCount)
+        let result = parameters.withUnsafeMutableBufferPointer { buffer in
+            darkroomLightDefaultBehaviorTuning(buffer.baseAddress, buffer.count)
         }
 
         guard result == 1 else {
@@ -54,6 +71,34 @@ enum DarkroomCoreLightMath {
         return parameters
     }
 
+    static func kernelParameters(for light: LightAdjustments, behaviorTuning: BehaviorTuning) -> [Float] {
+        var parameters = [Float](repeating: 0, count: kernelParameterCount)
+        let behaviorParameters = behaviorTuning.flatParameters
+        let result = behaviorParameters.withUnsafeBufferPointer { behaviorBuffer in
+            parameters.withUnsafeMutableBufferPointer { buffer in
+                darkroomLightKernelParametersWithBehaviorTuning(
+                    Float(light.exposureEV),
+                    Float(light.contrast),
+                    Float(light.pivotEV),
+                    Float(light.highlights),
+                    Float(light.shadows),
+                    Float(light.whites),
+                    Float(light.blacks),
+                    behaviorBuffer.baseAddress,
+                    behaviorBuffer.count,
+                    buffer.baseAddress,
+                    buffer.count
+                )
+            }
+        }
+
+        guard result == 1 else {
+            return [Float](repeating: 0, count: kernelParameterCount)
+        }
+
+        return parameters
+    }
+
     static func exposureGain(exposureEV: Double) -> Double {
         Double(darkroomLightExposureGain(Float(exposureEV)))
     }
@@ -75,8 +120,17 @@ private func darkroomLightKernelParameterCount() -> Int
 @_silgen_name("darkroom_tone_tuning_parameter_count")
 private func darkroomToneTuningParameterCount() -> Int
 
+@_silgen_name("darkroom_behavior_tuning_parameter_count")
+private func darkroomBehaviorTuningParameterCount() -> Int
+
 @_silgen_name("darkroom_light_default_tuning")
 private func darkroomLightDefaultTuning(
+    _ outputParameters: UnsafeMutablePointer<Float>?,
+    _ outputParameterCount: Int
+) -> UInt8
+
+@_silgen_name("darkroom_light_default_behavior_tuning")
+private func darkroomLightDefaultBehaviorTuning(
     _ outputParameters: UnsafeMutablePointer<Float>?,
     _ outputParameterCount: Int
 ) -> UInt8
@@ -105,6 +159,21 @@ private func darkroomLightKernelParametersWithTuning(
     _ blacks: Float,
     _ tuningParameters: UnsafePointer<Float>?,
     _ tuningParameterCount: Int,
+    _ outputParameters: UnsafeMutablePointer<Float>?,
+    _ outputParameterCount: Int
+) -> UInt8
+
+@_silgen_name("darkroom_light_kernel_parameters_with_behavior_tuning")
+private func darkroomLightKernelParametersWithBehaviorTuning(
+    _ exposureEV: Float,
+    _ contrast: Float,
+    _ pivotEV: Float,
+    _ highlights: Float,
+    _ shadows: Float,
+    _ whites: Float,
+    _ blacks: Float,
+    _ behaviorParameters: UnsafePointer<Float>?,
+    _ behaviorParameterCount: Int,
     _ outputParameters: UnsafeMutablePointer<Float>?,
     _ outputParameterCount: Int
 ) -> UInt8

@@ -19,7 +19,9 @@ V1 now has a recipe model in `apps/macos/Sources/EditGraph` with:
 - Blacks.
 - A named `darkroom_tonal_curve_v1` curve model.
 
-The visible recipe remains separate from `ToneTuning`, a hidden developer-only set of constants that defines how the visible sliders map into tonal influence zones, slider response, endpoint behavior, contrast softness, and base curve shaping. Tone Lab can mutate a local `ToneTuning` while testing a local recipe, but sidecars continue to store only user-facing recipe values.
+The visible recipe remains separate from `ToneTuning`, a hidden developer-only set of constants that defines how the visible sliders map into tonal influence zones, per-slider response, endpoint behavior, contrast softness, and base curve shaping. Tone Lab V2 can also pass a full `BehaviorTuning` candidate through the renderer so exposure feel, endpoint width, color coupling, and diagnostic overlay constants affect preview without entering user sidecars.
+
+Tone Lab V2 also uses a `BehaviorTuning` candidate wrapper for export and comparison. That wrapper carries candidate metadata plus tone tuning, exposure-feel constants, color-coupling constants, per-slider mappings, view-transform notes, and overlay tuning. It is a developer artifact, not persisted user edit state.
 
 The original file must remain untouched. Export is where pixels become final output for other apps. The current recipe store caches values in memory during the app session and persists non-neutral values to a sidecar next to the source image without blocking live adjustments.
 
@@ -57,5 +59,6 @@ Use SQLite for local indexing and cache registry. Use XMP for interoperable meta
 - Core tone changes compute working-space luminance, map luminance in log2 stops around middle gray, then apply a hue-preserving luminance gain back to RGB.
 - Contrast is stored as a `-100...100` slider and mapped through a nonlinear signed strength. Pivot is stored as `-2...2` EV relative to middle gray and is part of the same curve, not a separate brightness operation.
 - Highlights, shadows, whites, and blacks are stored as `-100...100` sliders and mapped through nonlinear, bounded EV adjustments. Highlights and shadows target broad bright/dark tonal zones; whites and blacks target endpoint energy/density.
+- Contrast, highlights, shadows, whites, and blacks now use per-slider hidden mapping constants when converted from visible slider values into renderer parameters. Exposure remains a real EV value; Tone Lab exposure-feel constants can shape toe, shoulder, shadow visibility, and chroma response around that true EV gain.
 - The named `darkroom_tonal_curve_v1` remains monotonic under slider extremes so the tone curve cannot visually flip from bottom-left/top-right into a reversed curve.
 - Rust owns the scalar reference math, tone-shaping constants, hidden tuning-to-kernel mapping, and V1 kernel-parameter mapping. The Swift image pipeline applies those Rust-derived parameters through a Core Image path so preview and export match. Rust remains the intended long-term owner for more of the portable edit graph and reference math.

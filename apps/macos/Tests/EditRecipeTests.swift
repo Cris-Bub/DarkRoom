@@ -17,6 +17,8 @@ final class EditRecipeTests: XCTestCase {
         XCTAssertEqual(recipe.light.kernelParameters.count, DarkroomCoreLightMath.kernelParameterCount)
         XCTAssertEqual(ToneTuning.defaultV1.flatParameters.count, DarkroomCoreLightMath.toneTuningParameterCount)
         XCTAssertEqual(ToneTuning.defaultV1.flatParameters, DarkroomCoreLightMath.defaultToneTuningParameters())
+        XCTAssertEqual(BehaviorTuning.defaultV2.flatParameters.count, DarkroomCoreLightMath.behaviorTuningParameterCount)
+        XCTAssertEqual(BehaviorTuning.defaultV2.flatParameters, DarkroomCoreLightMath.defaultBehaviorTuningParameters())
     }
 
     func testLightAdjustmentMappingsAreCenteredOnNeutral() {
@@ -60,13 +62,166 @@ final class EditRecipeTests: XCTestCase {
         XCTAssertEqual(light.shadows, 100)
     }
 
+    func testPerSliderMappingsCanTuneOneSliderResponse() {
+        var light = LightAdjustments()
+        light.highlights = 100
+        light.shadows = 100
+
+        var tuning = ToneTuning.defaultV1
+        tuning.sliderMappings.highlights.softLimit = 0.25
+
+        let defaultParameters = light.kernelParameters
+        let tunedParameters = light.kernelParameters(toneTuning: tuning)
+
+        XCTAssertLessThan(tunedParameters[3], defaultParameters[3])
+        XCTAssertEqual(tunedParameters[4], defaultParameters[4], accuracy: 0.000_001)
+    }
+
+    func testBehaviorTuningDrivesKernelParametersWithoutChangingExposureStops() {
+        var light = LightAdjustments()
+        light.exposureEV = 1
+
+        var behavior = BehaviorTuning.defaultV2
+        behavior.exposureFeelTuning.responseExponent = 2.0
+        behavior.exposureFeelTuning.shadowVisibilityPerEV = 0.5
+
+        let tunedParameters = light.kernelParameters(behaviorTuning: behavior)
+
+        XCTAssertEqual(tunedParameters[0], 2, accuracy: 0.000_001)
+        XCTAssertGreaterThan(tunedParameters[40], 0)
+    }
+
     func testToneTuningCopiesAsReadableJSON() throws {
         let json = ToneTuning.suggestedCandidate01.prettyPrintedJSON
         let decoded = try JSONDecoder().decode(ToneTuning.self, from: Data(json.utf8))
 
         XCTAssertEqual(decoded, .suggestedCandidate01)
         XCTAssertTrue(json.contains("\"highlights\""))
-        XCTAssertTrue(json.contains("\"sliderMapping\""))
+        XCTAssertTrue(json.contains("\"sliderMappings\""))
+    }
+
+    func testBehaviorTuningCopiesFullV2JSON() throws {
+        let json = BehaviorTuning.suggestedCandidate01.prettyPrintedJSON
+        let decoded = try JSONDecoder().decode(BehaviorTuning.self, from: Data(json.utf8))
+
+        XCTAssertEqual(decoded.schemaVersion, 2)
+        XCTAssertTrue(json.contains("\"toneTuning\""))
+        XCTAssertTrue(json.contains("\"exposureFeelTuning\""))
+        XCTAssertTrue(json.contains("\"colorCouplingTuning\""))
+        XCTAssertTrue(json.contains("\"sliderMappings\""))
+    }
+
+    func testBehaviorTuningDecodesOlderEndpointJSONWithDerivedFullEV() throws {
+        let json = """
+        {
+          "schemaVersion": 2,
+          "name": "Legacy Candidate",
+          "toneTuning": {
+            "version": "darkroom_tonal_curve_v1_current",
+            "global": {
+              "baseContrast": 1.0,
+              "displayMiddleGray": 0.44,
+              "middleGray": 0.18,
+              "outputSoftClip": 0.0,
+              "sceneBlackEV": -7.0,
+              "sceneWhiteEV": 4.0,
+              "shoulderLengthEV": 3.0,
+              "shoulderRollStrength": 0.0,
+              "shoulderStrength": 0.0,
+              "toeLengthEV": 2.5,
+              "toeLift": 0.0,
+              "toeStrength": 0.0
+            },
+            "contrast": {
+              "affectsSaturation": true,
+              "contrastSoftness": 2.0,
+              "hueProtection": 0.8,
+              "maxSlopeBoost": 1.35,
+              "maxSlopeReduction": 1.35,
+              "mode": "rgbRatioPreserve",
+              "neutralProtection": 1.0,
+              "pivotMaxEV": 2.0,
+              "pivotMinEV": -2.0,
+              "saturationAmount": 0.08,
+              "saturationZone": "midtones"
+            },
+            "highlights": {
+              "chromaMode": "preserveHue",
+              "endpointProtection": 0.0,
+              "falloff": 1.0,
+              "falloffShape": "smooth",
+              "fullEV": 4.0,
+              "hueProtection": 0.8,
+              "liftDesaturation": 0.0,
+              "maxLiftEV": 1.8,
+              "maxPullEV": -1.8,
+              "midtoneProtection": 0.0,
+              "nearEndpointDesaturation": 0.12,
+              "noiseChromaProtection": 0.0,
+              "pullDesaturation": 0.16,
+              "saturationClamp": 1.15,
+              "startEV": 0.5
+            },
+            "shadows": {
+              "chromaMode": "preserveHue",
+              "endpointProtection": 0.0,
+              "falloff": 1.0,
+              "falloffShape": "smooth",
+              "fullEV": -4.0,
+              "hueProtection": 0.8,
+              "liftDesaturation": 0.12,
+              "maxLiftEV": 1.8,
+              "maxPullEV": -1.8,
+              "midtoneProtection": 0.0,
+              "nearEndpointDesaturation": 0.0,
+              "noiseChromaProtection": 0.35,
+              "pullDesaturation": 0.0,
+              "saturationClamp": 1.15,
+              "startEV": -0.5
+            },
+            "whites": {
+              "chromaProtection": 0.35,
+              "densitySaturationCoupling": 0.0,
+              "desaturationNearClip": 0.1,
+              "falloffShape": "smooth",
+              "maxShiftEV": 2.0,
+              "protection": 0.0,
+              "shoulderCoupling": 0.5,
+              "softness": 2.0,
+              "startEV": 1.0,
+              "strength": 1.0,
+              "toeCoupling": 0.0
+            },
+            "blacks": {
+              "chromaProtection": 0.45,
+              "densitySaturationCoupling": 0.04,
+              "desaturationNearClip": 0.0,
+              "falloffShape": "smooth",
+              "maxShiftEV": 2.0,
+              "protection": 0.0,
+              "shoulderCoupling": 0.0,
+              "softness": 2.0,
+              "startEV": -1.0,
+              "strength": 1.0,
+              "toeCoupling": 0.6
+            },
+            "sliderMappings": {
+              "exposure": { "deadZone": 0.0, "extremeSensitivity": 1.0, "midSensitivity": 1.0, "nearZeroSensitivity": 0.0, "positiveNegativeSymmetry": 1.0, "responseExponent": 1.0, "softLimit": 1.0 },
+              "contrast": { "deadZone": 0.0, "extremeSensitivity": 1.0, "midSensitivity": 1.0, "nearZeroSensitivity": 0.0, "positiveNegativeSymmetry": 1.0, "responseExponent": 1.0, "softLimit": 1.0 },
+              "highlights": { "deadZone": 0.0, "extremeSensitivity": 1.0, "midSensitivity": 1.0, "nearZeroSensitivity": 0.0, "positiveNegativeSymmetry": 1.0, "responseExponent": 1.0, "softLimit": 1.0 },
+              "shadows": { "deadZone": 0.0, "extremeSensitivity": 1.0, "midSensitivity": 1.0, "nearZeroSensitivity": 0.0, "positiveNegativeSymmetry": 1.0, "responseExponent": 1.0, "softLimit": 1.0 },
+              "whites": { "deadZone": 0.0, "extremeSensitivity": 1.0, "midSensitivity": 1.0, "nearZeroSensitivity": 0.0, "positiveNegativeSymmetry": 1.0, "responseExponent": 1.0, "softLimit": 1.0 },
+              "blacks": { "deadZone": 0.0, "extremeSensitivity": 1.0, "midSensitivity": 1.0, "nearZeroSensitivity": 0.0, "positiveNegativeSymmetry": 1.0, "responseExponent": 1.0, "softLimit": 1.0 }
+            }
+          }
+        }
+        """
+
+        let decoded = try JSONDecoder().decode(BehaviorTuning.self, from: Data(json.utf8))
+
+        XCTAssertEqual(decoded.toneTuning.whites.fullEV, 5.0, accuracy: 0.000_001)
+        XCTAssertEqual(decoded.toneTuning.blacks.fullEV, -5.0, accuracy: 0.000_001)
+        XCTAssertEqual(decoded.overlayTuning, .defaultV2)
     }
 
     @MainActor
