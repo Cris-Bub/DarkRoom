@@ -54,7 +54,9 @@ struct ToneTuning: Codable, Equatable, Hashable, Sendable {
             saturationClamp: 1.15,
             liftDesaturation: 0.0,
             noiseChromaProtection: 0.0,
-            hueProtection: 0.8
+            hueProtection: 0.8,
+            bodyBias: 0.0,
+            peakDamping: 0.0
         ),
         shadows: RangeToneTuning(
             startEV: -0.5,
@@ -71,7 +73,9 @@ struct ToneTuning: Codable, Equatable, Hashable, Sendable {
             saturationClamp: 1.15,
             liftDesaturation: 0.12,
             noiseChromaProtection: 0.35,
-            hueProtection: 0.8
+            hueProtection: 0.8,
+            bodyBias: 0.0,
+            peakDamping: 0.0
         ),
         whites: EndpointToneTuning(
             startEV: 1.0,
@@ -85,7 +89,9 @@ struct ToneTuning: Codable, Equatable, Hashable, Sendable {
             toeCoupling: 0.0,
             chromaProtection: 0.35,
             desaturationNearClip: 0.1,
-            densitySaturationCoupling: 0.0
+            densitySaturationCoupling: 0.0,
+            bodyBias: 0.0,
+            peakDamping: 0.0
         ),
         blacks: EndpointToneTuning(
             startEV: -1.0,
@@ -99,7 +105,9 @@ struct ToneTuning: Codable, Equatable, Hashable, Sendable {
             toeCoupling: 0.6,
             chromaProtection: 0.45,
             desaturationNearClip: 0.0,
-            densitySaturationCoupling: 0.04
+            densitySaturationCoupling: 0.04,
+            bodyBias: 0.0,
+            peakDamping: 0.0
         ),
         sliderMappings: .defaultV1
     )
@@ -134,8 +142,8 @@ struct ToneTuning: Codable, Equatable, Hashable, Sendable {
             neutralProtection: 1.0
         ),
         highlights: RangeToneTuning(
-            startEV: 0.55,
-            fullEV: 2.4,
+            startEV: -0.85,
+            fullEV: 2.8,
             maxLiftEV: 1.6,
             maxPullEV: -3.0,
             falloff: 0.75,
@@ -148,11 +156,13 @@ struct ToneTuning: Codable, Equatable, Hashable, Sendable {
             saturationClamp: 1.15,
             liftDesaturation: 0.0,
             noiseChromaProtection: 0.0,
-            hueProtection: 0.8
+            hueProtection: 0.8,
+            bodyBias: 0.45,
+            peakDamping: 0.25
         ),
         shadows: RangeToneTuning(
-            startEV: -0.45,
-            fullEV: -2.7,
+            startEV: 0.65,
+            fullEV: -3.0,
             maxLiftEV: 3.0,
             maxPullEV: -1.7,
             falloff: 0.75,
@@ -165,7 +175,9 @@ struct ToneTuning: Codable, Equatable, Hashable, Sendable {
             saturationClamp: 1.15,
             liftDesaturation: 0.12,
             noiseChromaProtection: 0.35,
-            hueProtection: 0.8
+            hueProtection: 0.8,
+            bodyBias: 0.35,
+            peakDamping: 0.2
         ),
         whites: EndpointToneTuning(
             startEV: 2.0,
@@ -179,7 +191,9 @@ struct ToneTuning: Codable, Equatable, Hashable, Sendable {
             toeCoupling: 0.0,
             chromaProtection: 0.35,
             desaturationNearClip: 0.1,
-            densitySaturationCoupling: 0.0
+            densitySaturationCoupling: 0.0,
+            bodyBias: 0.2,
+            peakDamping: 0.35
         ),
         blacks: EndpointToneTuning(
             startEV: -2.2,
@@ -193,7 +207,9 @@ struct ToneTuning: Codable, Equatable, Hashable, Sendable {
             toeCoupling: 0.6,
             chromaProtection: 0.45,
             desaturationNearClip: 0.0,
-            densitySaturationCoupling: 0.04
+            densitySaturationCoupling: 0.04,
+            bodyBias: 0.2,
+            peakDamping: 0.25
         ),
         sliderMappings: .suggestedCandidate01
     )
@@ -238,6 +254,8 @@ struct ToneTuning: Codable, Equatable, Hashable, Sendable {
             Float(highlights.liftDesaturation),
             Float(highlights.noiseChromaProtection),
             Float(highlights.hueProtection),
+            Float(highlights.bodyBias),
+            Float(highlights.peakDamping),
             Float(shadows.startEV),
             Float(shadows.fullEV),
             Float(shadows.maxLiftEV),
@@ -253,6 +271,8 @@ struct ToneTuning: Codable, Equatable, Hashable, Sendable {
             Float(shadows.liftDesaturation),
             Float(shadows.noiseChromaProtection),
             Float(shadows.hueProtection),
+            Float(shadows.bodyBias),
+            Float(shadows.peakDamping),
             Float(whites.startEV),
             Float(whites.fullEV),
             Float(whites.strength),
@@ -265,6 +285,8 @@ struct ToneTuning: Codable, Equatable, Hashable, Sendable {
             Float(whites.chromaProtection),
             Float(whites.desaturationNearClip),
             Float(whites.densitySaturationCoupling),
+            Float(whites.bodyBias),
+            Float(whites.peakDamping),
             Float(blacks.startEV),
             Float(blacks.fullEV),
             Float(blacks.strength),
@@ -277,6 +299,8 @@ struct ToneTuning: Codable, Equatable, Hashable, Sendable {
             Float(blacks.chromaProtection),
             Float(blacks.desaturationNearClip),
             Float(blacks.densitySaturationCoupling),
+            Float(blacks.bodyBias),
+            Float(blacks.peakDamping),
         ]
         parameters.append(contentsOf: sliderMappings.flatParameters)
         return parameters
@@ -340,6 +364,68 @@ struct RangeToneTuning: Codable, Equatable, Hashable, Sendable {
     var liftDesaturation: Double
     var noiseChromaProtection: Double
     var hueProtection: Double
+
+    var bodyBias: Double
+    var peakDamping: Double
+
+    init(
+        startEV: Double,
+        fullEV: Double,
+        maxLiftEV: Double,
+        maxPullEV: Double,
+        falloff: Double,
+        midtoneProtection: Double,
+        endpointProtection: Double,
+        falloffShape: FalloffShape,
+        chromaMode: RegionalChromaMode,
+        pullDesaturation: Double,
+        nearEndpointDesaturation: Double,
+        saturationClamp: Double,
+        liftDesaturation: Double,
+        noiseChromaProtection: Double,
+        hueProtection: Double,
+        bodyBias: Double,
+        peakDamping: Double
+    ) {
+        self.startEV = startEV
+        self.fullEV = fullEV
+        self.maxLiftEV = maxLiftEV
+        self.maxPullEV = maxPullEV
+        self.falloff = falloff
+        self.midtoneProtection = midtoneProtection
+        self.endpointProtection = endpointProtection
+        self.falloffShape = falloffShape
+        self.chromaMode = chromaMode
+        self.pullDesaturation = pullDesaturation
+        self.nearEndpointDesaturation = nearEndpointDesaturation
+        self.saturationClamp = saturationClamp
+        self.liftDesaturation = liftDesaturation
+        self.noiseChromaProtection = noiseChromaProtection
+        self.hueProtection = hueProtection
+        self.bodyBias = bodyBias
+        self.peakDamping = peakDamping
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        startEV = try container.decode(Double.self, forKey: .startEV)
+        fullEV = try container.decode(Double.self, forKey: .fullEV)
+        maxLiftEV = try container.decode(Double.self, forKey: .maxLiftEV)
+        maxPullEV = try container.decode(Double.self, forKey: .maxPullEV)
+        falloff = try container.decode(Double.self, forKey: .falloff)
+        midtoneProtection = try container.decode(Double.self, forKey: .midtoneProtection)
+        endpointProtection = try container.decode(Double.self, forKey: .endpointProtection)
+        falloffShape = try container.decodeIfPresent(FalloffShape.self, forKey: .falloffShape) ?? .smooth
+        chromaMode = try container.decodeIfPresent(RegionalChromaMode.self, forKey: .chromaMode) ?? .preserveHue
+        pullDesaturation = try container.decodeIfPresent(Double.self, forKey: .pullDesaturation) ?? 0
+        nearEndpointDesaturation = try container.decodeIfPresent(Double.self, forKey: .nearEndpointDesaturation) ?? 0
+        saturationClamp = try container.decodeIfPresent(Double.self, forKey: .saturationClamp) ?? 1.15
+        liftDesaturation = try container.decodeIfPresent(Double.self, forKey: .liftDesaturation) ?? 0
+        noiseChromaProtection = try container.decodeIfPresent(Double.self, forKey: .noiseChromaProtection) ?? 0
+        hueProtection = try container.decodeIfPresent(Double.self, forKey: .hueProtection) ?? 0.8
+        bodyBias = try container.decodeIfPresent(Double.self, forKey: .bodyBias) ?? 0
+        peakDamping = try container.decodeIfPresent(Double.self, forKey: .peakDamping) ?? 0
+    }
 }
 
 struct EndpointToneTuning: Codable, Equatable, Hashable, Sendable {
@@ -355,6 +441,8 @@ struct EndpointToneTuning: Codable, Equatable, Hashable, Sendable {
     var chromaProtection: Double
     var desaturationNearClip: Double
     var densitySaturationCoupling: Double
+    var bodyBias: Double
+    var peakDamping: Double
 
     init(
         startEV: Double,
@@ -368,7 +456,9 @@ struct EndpointToneTuning: Codable, Equatable, Hashable, Sendable {
         toeCoupling: Double,
         chromaProtection: Double,
         desaturationNearClip: Double,
-        densitySaturationCoupling: Double
+        densitySaturationCoupling: Double,
+        bodyBias: Double,
+        peakDamping: Double
     ) {
         self.startEV = startEV
         self.fullEV = fullEV
@@ -382,6 +472,8 @@ struct EndpointToneTuning: Codable, Equatable, Hashable, Sendable {
         self.chromaProtection = chromaProtection
         self.desaturationNearClip = desaturationNearClip
         self.densitySaturationCoupling = densitySaturationCoupling
+        self.bodyBias = bodyBias
+        self.peakDamping = peakDamping
     }
 
     init(from decoder: Decoder) throws {
@@ -399,6 +491,8 @@ struct EndpointToneTuning: Codable, Equatable, Hashable, Sendable {
         chromaProtection = try container.decodeIfPresent(Double.self, forKey: .chromaProtection) ?? 0
         desaturationNearClip = try container.decodeIfPresent(Double.self, forKey: .desaturationNearClip) ?? 0
         densitySaturationCoupling = try container.decodeIfPresent(Double.self, forKey: .densitySaturationCoupling) ?? 0
+        bodyBias = try container.decodeIfPresent(Double.self, forKey: .bodyBias) ?? 0
+        peakDamping = try container.decodeIfPresent(Double.self, forKey: .peakDamping) ?? 0
     }
 
     private static func derivedFullEV(startEV: Double, maxShiftEV: Double, softness: Double) -> Double {
@@ -581,7 +675,7 @@ enum FalloffShape: String, Codable, CaseIterable, Identifiable, Hashable, Sendab
     }
 }
 
-private extension FalloffShape {
+extension FalloffShape {
     var kernelValue: Double {
         switch self {
         case .smooth:

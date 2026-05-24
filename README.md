@@ -26,11 +26,25 @@ DarkRoom now has the early V1 shell plus the first color-managed edit/export pat
 ./scripts/test-rust.sh
 ```
 
+If you prefer shorter command names, the repo also includes `make` aliases for the same scripts:
+
+```bash
+make doctor
+make test-rust
+```
+
 To build and run the macOS app once Tuist or XcodeGen is installed:
 
 ```bash
 ./scripts/generate.sh
 ./scripts/dev.sh
+```
+
+Or with the `make` aliases:
+
+```bash
+make generate
+make dev
 ```
 
 Daily development should happen in Cursor or VS Code. Xcode is still required as the Apple toolchain for SDKs, signing, Instruments, Metal tooling, and occasional debugging, but project structure should live in source-controlled files and scripts.

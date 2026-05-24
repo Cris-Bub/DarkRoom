@@ -2,9 +2,9 @@ pub const DARKROOM_TONAL_CURVE_V1: &str = "darkroom_tonal_curve_v1";
 pub const DEFAULT_CONTRAST_PIVOT: f32 = MIDDLE_GRAY;
 pub const MIDDLE_GRAY: f32 = 0.18;
 pub const TONE_EPSILON: f32 = 1.0e-6;
-pub const LIGHT_KERNEL_PARAMETER_COUNT: usize = 90;
-pub const TONE_TUNING_PARAMETER_COUNT: usize = 119;
-pub const BEHAVIOR_TUNING_PARAMETER_COUNT: usize = 151;
+pub const LIGHT_KERNEL_PARAMETER_COUNT: usize = 108;
+pub const TONE_TUNING_PARAMETER_COUNT: usize = 127;
+pub const BEHAVIOR_TUNING_PARAMETER_COUNT: usize = 166;
 
 const LUMA_RED: f32 = 0.288_040_2;
 const LUMA_GREEN: f32 = 0.711_874_1;
@@ -130,9 +130,11 @@ impl Default for ToneTuning {
                 pull_desaturation: 0.16,
                 near_endpoint_desaturation: 0.12,
                 saturation_clamp: 1.15,
-                lift_desaturation: 0.12,
-                noise_chroma_protection: 0.35,
+                lift_desaturation: 0.0,
+                noise_chroma_protection: 0.0,
                 hue_protection: 0.8,
+                body_bias: 0.0,
+                peak_damping: 0.0,
             },
             shadows: RangeToneTuning {
                 start_ev: -SHADOW_ZONE_START_EV,
@@ -147,9 +149,11 @@ impl Default for ToneTuning {
                 pull_desaturation: 0.0,
                 near_endpoint_desaturation: 0.0,
                 saturation_clamp: 1.15,
-                lift_desaturation: 0.0,
-                noise_chroma_protection: 0.0,
+                lift_desaturation: 0.12,
+                noise_chroma_protection: 0.35,
                 hue_protection: 0.8,
+                body_bias: 0.0,
+                peak_damping: 0.0,
             },
             whites: EndpointToneTuning {
                 start_ev: WHITE_ZONE_START_EV,
@@ -164,6 +168,8 @@ impl Default for ToneTuning {
                 chroma_protection: 0.35,
                 desaturation_near_clip: 0.1,
                 density_saturation_coupling: 0.0,
+                body_bias: 0.0,
+                peak_damping: 0.0,
             },
             blacks: EndpointToneTuning {
                 start_ev: -BLACK_ZONE_START_EV,
@@ -178,6 +184,8 @@ impl Default for ToneTuning {
                 chroma_protection: 0.45,
                 desaturation_near_clip: 0.0,
                 density_saturation_coupling: 0.04,
+                body_bias: 0.0,
+                peak_damping: 0.0,
             },
             slider_mappings: SliderMappingsTuning::default(),
         }
@@ -225,6 +233,8 @@ impl ToneTuning {
             self.highlights.lift_desaturation,
             self.highlights.noise_chroma_protection,
             self.highlights.hue_protection,
+            self.highlights.body_bias,
+            self.highlights.peak_damping,
             self.shadows.start_ev,
             self.shadows.full_ev,
             self.shadows.max_lift_ev,
@@ -240,6 +250,8 @@ impl ToneTuning {
             self.shadows.lift_desaturation,
             self.shadows.noise_chroma_protection,
             self.shadows.hue_protection,
+            self.shadows.body_bias,
+            self.shadows.peak_damping,
             self.whites.start_ev,
             self.whites.full_ev,
             self.whites.strength,
@@ -252,6 +264,8 @@ impl ToneTuning {
             self.whites.chroma_protection,
             self.whites.desaturation_near_clip,
             self.whites.density_saturation_coupling,
+            self.whites.body_bias,
+            self.whites.peak_damping,
             self.blacks.start_ev,
             self.blacks.full_ev,
             self.blacks.strength,
@@ -264,6 +278,8 @@ impl ToneTuning {
             self.blacks.chroma_protection,
             self.blacks.desaturation_near_clip,
             self.blacks.density_saturation_coupling,
+            self.blacks.body_bias,
+            self.blacks.peak_damping,
         ];
         parameters.extend(self.slider_mappings.to_floats());
         parameters
@@ -318,53 +334,61 @@ impl ToneTuning {
                 lift_desaturation: parameters[35],
                 noise_chroma_protection: parameters[36],
                 hue_protection: parameters[37],
+                body_bias: parameters[38],
+                peak_damping: parameters[39],
             },
             shadows: RangeToneTuning {
-                start_ev: parameters[38],
-                full_ev: parameters[39],
-                max_lift_ev: parameters[40],
-                max_pull_ev: parameters[41],
-                falloff: parameters[42],
-                midtone_protection: parameters[43],
-                endpoint_protection: parameters[44],
-                falloff_shape: parameters[45],
-                chroma_mode: parameters[46],
-                pull_desaturation: parameters[47],
-                near_endpoint_desaturation: parameters[48],
-                saturation_clamp: parameters[49],
-                lift_desaturation: parameters[50],
-                noise_chroma_protection: parameters[51],
-                hue_protection: parameters[52],
+                start_ev: parameters[40],
+                full_ev: parameters[41],
+                max_lift_ev: parameters[42],
+                max_pull_ev: parameters[43],
+                falloff: parameters[44],
+                midtone_protection: parameters[45],
+                endpoint_protection: parameters[46],
+                falloff_shape: parameters[47],
+                chroma_mode: parameters[48],
+                pull_desaturation: parameters[49],
+                near_endpoint_desaturation: parameters[50],
+                saturation_clamp: parameters[51],
+                lift_desaturation: parameters[52],
+                noise_chroma_protection: parameters[53],
+                hue_protection: parameters[54],
+                body_bias: parameters[55],
+                peak_damping: parameters[56],
             },
             whites: EndpointToneTuning {
-                start_ev: parameters[53],
-                full_ev: parameters[54],
-                strength: parameters[55],
-                max_shift_ev: parameters[56],
-                softness: parameters[57],
-                protection: parameters[58],
-                falloff_shape: parameters[59],
-                shoulder_coupling: parameters[60],
-                toe_coupling: parameters[61],
-                chroma_protection: parameters[62],
-                desaturation_near_clip: parameters[63],
-                density_saturation_coupling: parameters[64],
+                start_ev: parameters[57],
+                full_ev: parameters[58],
+                strength: parameters[59],
+                max_shift_ev: parameters[60],
+                softness: parameters[61],
+                protection: parameters[62],
+                falloff_shape: parameters[63],
+                shoulder_coupling: parameters[64],
+                toe_coupling: parameters[65],
+                chroma_protection: parameters[66],
+                desaturation_near_clip: parameters[67],
+                density_saturation_coupling: parameters[68],
+                body_bias: parameters[69],
+                peak_damping: parameters[70],
             },
             blacks: EndpointToneTuning {
-                start_ev: parameters[65],
-                full_ev: parameters[66],
-                strength: parameters[67],
-                max_shift_ev: parameters[68],
-                softness: parameters[69],
-                protection: parameters[70],
-                falloff_shape: parameters[71],
-                shoulder_coupling: parameters[72],
-                toe_coupling: parameters[73],
-                chroma_protection: parameters[74],
-                desaturation_near_clip: parameters[75],
-                density_saturation_coupling: parameters[76],
+                start_ev: parameters[71],
+                full_ev: parameters[72],
+                strength: parameters[73],
+                max_shift_ev: parameters[74],
+                softness: parameters[75],
+                protection: parameters[76],
+                falloff_shape: parameters[77],
+                shoulder_coupling: parameters[78],
+                toe_coupling: parameters[79],
+                chroma_protection: parameters[80],
+                desaturation_near_clip: parameters[81],
+                density_saturation_coupling: parameters[82],
+                body_bias: parameters[83],
+                peak_damping: parameters[84],
             },
-            slider_mappings: SliderMappingsTuning::from_floats(&parameters[77..119])?,
+            slider_mappings: SliderMappingsTuning::from_floats(&parameters[85..127])?,
         })
     }
 }
@@ -406,11 +430,11 @@ impl BehaviorTuning {
         }
 
         Some(Self {
-            tone: ToneTuning::from_floats(&parameters[0..119])?,
-            exposure_feel: ExposureFeelTuning::from_floats(&parameters[119..128])?,
-            color_coupling: ColorCouplingTuning::from_floats(&parameters[128..146])?,
-            view_transform: ViewTransformTuning::from_floats(&parameters[146..148])?,
-            overlay: OverlayTuning::from_floats(&parameters[148..151])?,
+            tone: ToneTuning::from_floats(&parameters[0..127])?,
+            exposure_feel: ExposureFeelTuning::from_floats(&parameters[127..143])?,
+            color_coupling: ColorCouplingTuning::from_floats(&parameters[143..161])?,
+            view_transform: ViewTransformTuning::from_floats(&parameters[161..163])?,
+            overlay: OverlayTuning::from_floats(&parameters[163..166])?,
         })
     }
 }
@@ -426,6 +450,13 @@ pub struct ExposureFeelTuning {
     pub exposure_chroma_response: f32,
     pub saturation_min: f32,
     pub saturation_max: f32,
+    pub shadow_start_ev: f32,
+    pub shadow_full_ev: f32,
+    pub shadow_falloff: f32,
+    pub shadow_midtone_protection: f32,
+    pub shadow_endpoint_protection: f32,
+    pub shadow_body_bias: f32,
+    pub shadow_peak_damping: f32,
 }
 
 impl Default for ExposureFeelTuning {
@@ -440,12 +471,19 @@ impl Default for ExposureFeelTuning {
             exposure_chroma_response: 0.0,
             saturation_min: 0.92,
             saturation_max: 1.08,
+            shadow_start_ev: 0.0,
+            shadow_full_ev: -4.0,
+            shadow_falloff: 1.0,
+            shadow_midtone_protection: 0.0,
+            shadow_endpoint_protection: 0.0,
+            shadow_body_bias: 0.0,
+            shadow_peak_damping: 0.0,
         }
     }
 }
 
 impl ExposureFeelTuning {
-    fn to_floats(self) -> [f32; 9] {
+    fn to_floats(self) -> [f32; 16] {
         [
             self.ev_gain_scale,
             self.response_exponent,
@@ -456,6 +494,13 @@ impl ExposureFeelTuning {
             self.exposure_chroma_response,
             self.saturation_min,
             self.saturation_max,
+            self.shadow_start_ev,
+            self.shadow_full_ev,
+            self.shadow_falloff,
+            self.shadow_midtone_protection,
+            self.shadow_endpoint_protection,
+            self.shadow_body_bias,
+            self.shadow_peak_damping,
         ]
     }
 
@@ -464,6 +509,7 @@ impl ExposureFeelTuning {
             return None;
         }
 
+        let fallback = Self::default();
         Some(Self {
             ev_gain_scale: parameters[0],
             response_exponent: parameters[1],
@@ -474,6 +520,22 @@ impl ExposureFeelTuning {
             exposure_chroma_response: parameters[6],
             saturation_min: parameters[7],
             saturation_max: parameters[8],
+            shadow_start_ev: parameters.get(9).copied().unwrap_or(fallback.shadow_start_ev),
+            shadow_full_ev: parameters.get(10).copied().unwrap_or(fallback.shadow_full_ev),
+            shadow_falloff: parameters.get(11).copied().unwrap_or(fallback.shadow_falloff),
+            shadow_midtone_protection: parameters
+                .get(12)
+                .copied()
+                .unwrap_or(fallback.shadow_midtone_protection),
+            shadow_endpoint_protection: parameters
+                .get(13)
+                .copied()
+                .unwrap_or(fallback.shadow_endpoint_protection),
+            shadow_body_bias: parameters.get(14).copied().unwrap_or(fallback.shadow_body_bias),
+            shadow_peak_damping: parameters
+                .get(15)
+                .copied()
+                .unwrap_or(fallback.shadow_peak_damping),
         })
     }
 }
@@ -733,6 +795,8 @@ pub struct RangeToneTuning {
     pub lift_desaturation: f32,
     pub noise_chroma_protection: f32,
     pub hue_protection: f32,
+    pub body_bias: f32,
+    pub peak_damping: f32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -749,6 +813,8 @@ pub struct EndpointToneTuning {
     pub chroma_protection: f32,
     pub desaturation_near_clip: f32,
     pub density_saturation_coupling: f32,
+    pub body_bias: f32,
+    pub peak_damping: f32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -924,13 +990,13 @@ impl LightRecipe {
             luma_blue: LUMA_BLUE,
             contrast_max_ev,
             contrast_rolloff_ev: tuning.contrast.contrast_softness,
-            shadow_zone_start_ev: tuning.shadows.start_ev.abs(),
-            shadow_zone_full_ev: tuning.shadows.full_ev.abs(),
-            highlight_zone_start_ev: tuning.highlights.start_ev.abs(),
-            highlight_zone_full_ev: tuning.highlights.full_ev.abs(),
-            black_zone_start_ev: tuning.blacks.start_ev.abs(),
+            shadow_zone_start_ev: tuning.shadows.start_ev,
+            shadow_zone_full_ev: tuning.shadows.full_ev,
+            highlight_zone_start_ev: tuning.highlights.start_ev,
+            highlight_zone_full_ev: tuning.highlights.full_ev,
+            black_zone_start_ev: tuning.blacks.start_ev,
             black_zone_full_ev: endpoint_full_ev(tuning.blacks),
-            white_zone_start_ev: tuning.whites.start_ev.abs(),
+            white_zone_start_ev: tuning.whites.start_ev,
             white_zone_full_ev: endpoint_full_ev(tuning.whites),
             endpoint_max_ev: ENDPOINT_MAX_EV,
             base_contrast: tuning.global.base_contrast,
@@ -958,6 +1024,17 @@ impl LightRecipe {
             exposure_chroma_response: behavior.exposure_feel.exposure_chroma_response,
             exposure_saturation_min: behavior.exposure_feel.saturation_min,
             exposure_saturation_max: behavior.exposure_feel.saturation_max,
+            exposure_shadow_start_ev: behavior.exposure_feel.shadow_start_ev,
+            exposure_shadow_full_ev: behavior.exposure_feel.shadow_full_ev,
+            exposure_shadow_falloff: behavior.exposure_feel.shadow_falloff,
+            exposure_shadow_midtone_protection: behavior
+                .exposure_feel
+                .shadow_midtone_protection,
+            exposure_shadow_endpoint_protection: behavior
+                .exposure_feel
+                .shadow_endpoint_protection,
+            exposure_shadow_body_bias: behavior.exposure_feel.shadow_body_bias,
+            exposure_shadow_peak_damping: behavior.exposure_feel.shadow_peak_damping,
             contrast_mode: tuning.contrast.mode,
             contrast_affects_saturation: tuning.contrast.affects_saturation,
             contrast_saturation_amount: tuning.contrast.saturation_amount,
@@ -969,18 +1046,26 @@ impl LightRecipe {
             highlight_near_white_desaturation: tuning.highlights.near_endpoint_desaturation,
             highlight_saturation_clamp: tuning.highlights.saturation_clamp,
             highlight_hue_protection: tuning.highlights.hue_protection,
+            highlight_body_bias: tuning.highlights.body_bias,
+            highlight_peak_damping: tuning.highlights.peak_damping,
             shadow_falloff_shape: tuning.shadows.falloff_shape,
             shadow_lift_desaturation: tuning.shadows.lift_desaturation,
             shadow_noise_chroma_protection: tuning.shadows.noise_chroma_protection,
             shadow_hue_protection: tuning.shadows.hue_protection,
+            shadow_body_bias: tuning.shadows.body_bias,
+            shadow_peak_damping: tuning.shadows.peak_damping,
             white_falloff_shape: tuning.whites.falloff_shape,
             white_shoulder_coupling: tuning.whites.shoulder_coupling,
             white_chroma_protection: tuning.whites.chroma_protection,
             white_desaturation_near_clip: tuning.whites.desaturation_near_clip,
+            white_body_bias: tuning.whites.body_bias,
+            white_peak_damping: tuning.whites.peak_damping,
             black_falloff_shape: tuning.blacks.falloff_shape,
             black_toe_coupling: tuning.blacks.toe_coupling,
             black_chroma_protection: tuning.blacks.chroma_protection,
             black_density_saturation_coupling: tuning.blacks.density_saturation_coupling,
+            black_body_bias: tuning.blacks.body_bias,
+            black_peak_damping: tuning.blacks.peak_damping,
             tone_chroma_mode: behavior.color_coupling.tone_chroma_mode,
             global_chroma_preservation: behavior.color_coupling.global_chroma_preservation,
             saturation_min: behavior.color_coupling.saturation_min,
@@ -1008,6 +1093,9 @@ impl LightRecipe {
             overlay_influence_opacity: behavior.overlay.influence_opacity,
             overlay_saturation_scale: behavior.overlay.saturation_overlay_scale,
             overlay_neutral_drift_threshold: behavior.overlay.neutral_drift_threshold,
+            highlight_lift_desaturation: tuning.highlights.lift_desaturation,
+            highlight_chroma_mode: tuning.highlights.chroma_mode,
+            shadow_chroma_mode: tuning.shadows.chroma_mode,
         }
     }
 
@@ -1065,6 +1153,13 @@ pub struct LightKernelParameters {
     pub exposure_chroma_response: f32,
     pub exposure_saturation_min: f32,
     pub exposure_saturation_max: f32,
+    pub exposure_shadow_start_ev: f32,
+    pub exposure_shadow_full_ev: f32,
+    pub exposure_shadow_falloff: f32,
+    pub exposure_shadow_midtone_protection: f32,
+    pub exposure_shadow_endpoint_protection: f32,
+    pub exposure_shadow_body_bias: f32,
+    pub exposure_shadow_peak_damping: f32,
     pub contrast_mode: f32,
     pub contrast_affects_saturation: f32,
     pub contrast_saturation_amount: f32,
@@ -1076,18 +1171,26 @@ pub struct LightKernelParameters {
     pub highlight_near_white_desaturation: f32,
     pub highlight_saturation_clamp: f32,
     pub highlight_hue_protection: f32,
+    pub highlight_body_bias: f32,
+    pub highlight_peak_damping: f32,
     pub shadow_falloff_shape: f32,
     pub shadow_lift_desaturation: f32,
     pub shadow_noise_chroma_protection: f32,
     pub shadow_hue_protection: f32,
+    pub shadow_body_bias: f32,
+    pub shadow_peak_damping: f32,
     pub white_falloff_shape: f32,
     pub white_shoulder_coupling: f32,
     pub white_chroma_protection: f32,
     pub white_desaturation_near_clip: f32,
+    pub white_body_bias: f32,
+    pub white_peak_damping: f32,
     pub black_falloff_shape: f32,
     pub black_toe_coupling: f32,
     pub black_chroma_protection: f32,
     pub black_density_saturation_coupling: f32,
+    pub black_body_bias: f32,
+    pub black_peak_damping: f32,
     pub tone_chroma_mode: f32,
     pub global_chroma_preservation: f32,
     pub saturation_min: f32,
@@ -1109,6 +1212,9 @@ pub struct LightKernelParameters {
     pub overlay_influence_opacity: f32,
     pub overlay_saturation_scale: f32,
     pub overlay_neutral_drift_threshold: f32,
+    pub highlight_lift_desaturation: f32,
+    pub highlight_chroma_mode: f32,
+    pub shadow_chroma_mode: f32,
 }
 
 impl Default for LightKernelParameters {
@@ -1166,6 +1272,13 @@ impl LightKernelParameters {
             self.exposure_chroma_response,
             self.exposure_saturation_min,
             self.exposure_saturation_max,
+            self.exposure_shadow_start_ev,
+            self.exposure_shadow_full_ev,
+            self.exposure_shadow_falloff,
+            self.exposure_shadow_midtone_protection,
+            self.exposure_shadow_endpoint_protection,
+            self.exposure_shadow_body_bias,
+            self.exposure_shadow_peak_damping,
             self.contrast_mode,
             self.contrast_affects_saturation,
             self.contrast_saturation_amount,
@@ -1177,18 +1290,26 @@ impl LightKernelParameters {
             self.highlight_near_white_desaturation,
             self.highlight_saturation_clamp,
             self.highlight_hue_protection,
+            self.highlight_body_bias,
+            self.highlight_peak_damping,
             self.shadow_falloff_shape,
             self.shadow_lift_desaturation,
             self.shadow_noise_chroma_protection,
             self.shadow_hue_protection,
+            self.shadow_body_bias,
+            self.shadow_peak_damping,
             self.white_falloff_shape,
             self.white_shoulder_coupling,
             self.white_chroma_protection,
             self.white_desaturation_near_clip,
+            self.white_body_bias,
+            self.white_peak_damping,
             self.black_falloff_shape,
             self.black_toe_coupling,
             self.black_chroma_protection,
             self.black_density_saturation_coupling,
+            self.black_body_bias,
+            self.black_peak_damping,
             self.tone_chroma_mode,
             self.global_chroma_preservation,
             self.saturation_min,
@@ -1210,6 +1331,9 @@ impl LightKernelParameters {
             self.overlay_influence_opacity,
             self.overlay_saturation_scale,
             self.overlay_neutral_drift_threshold,
+            self.highlight_lift_desaturation,
+            self.highlight_chroma_mode,
+            self.shadow_chroma_mode,
         ]
     }
 
@@ -1265,50 +1389,68 @@ impl LightKernelParameters {
             exposure_chroma_response: parameters[43],
             exposure_saturation_min: parameters[44],
             exposure_saturation_max: parameters[45],
-            contrast_mode: parameters[46],
-            contrast_affects_saturation: parameters[47],
-            contrast_saturation_amount: parameters[48],
-            contrast_saturation_zone: parameters[49],
-            contrast_hue_protection: parameters[50],
-            contrast_neutral_protection: parameters[51],
-            highlight_falloff_shape: parameters[52],
-            highlight_pull_desaturation: parameters[53],
-            highlight_near_white_desaturation: parameters[54],
-            highlight_saturation_clamp: parameters[55],
-            highlight_hue_protection: parameters[56],
-            shadow_falloff_shape: parameters[57],
-            shadow_lift_desaturation: parameters[58],
-            shadow_noise_chroma_protection: parameters[59],
-            shadow_hue_protection: parameters[60],
-            white_falloff_shape: parameters[61],
-            white_shoulder_coupling: parameters[62],
-            white_chroma_protection: parameters[63],
-            white_desaturation_near_clip: parameters[64],
-            black_falloff_shape: parameters[65],
-            black_toe_coupling: parameters[66],
-            black_chroma_protection: parameters[67],
-            black_density_saturation_coupling: parameters[68],
-            tone_chroma_mode: parameters[69],
-            global_chroma_preservation: parameters[70],
-            saturation_min: parameters[71],
-            saturation_max: parameters[72],
-            neutral_protection: parameters[73],
-            skin_protection: parameters[74],
-            hue_stability: parameters[75],
-            gamut_compression_amount: parameters[76],
-            color_contrast_saturation_amount: parameters[77],
-            contrast_saturation_midtone_bias: parameters[78],
-            color_highlight_pull_desaturation: parameters[79],
-            color_highlight_near_white_desaturation: parameters[80],
-            color_shadow_lift_desaturation: parameters[81],
-            color_shadow_noise_chroma_protection: parameters[82],
-            color_black_density_saturation: parameters[83],
-            color_black_chroma_protection: parameters[84],
-            color_white_clip_desaturation: parameters[85],
-            color_white_chroma_protection: parameters[86],
-            overlay_influence_opacity: parameters[87],
-            overlay_saturation_scale: parameters[88],
-            overlay_neutral_drift_threshold: parameters[89],
+            exposure_shadow_start_ev: parameters[46],
+            exposure_shadow_full_ev: parameters[47],
+            exposure_shadow_falloff: parameters[48],
+            exposure_shadow_midtone_protection: parameters[49],
+            exposure_shadow_endpoint_protection: parameters[50],
+            exposure_shadow_body_bias: parameters[51],
+            exposure_shadow_peak_damping: parameters[52],
+            contrast_mode: parameters[53],
+            contrast_affects_saturation: parameters[54],
+            contrast_saturation_amount: parameters[55],
+            contrast_saturation_zone: parameters[56],
+            contrast_hue_protection: parameters[57],
+            contrast_neutral_protection: parameters[58],
+            highlight_falloff_shape: parameters[59],
+            highlight_pull_desaturation: parameters[60],
+            highlight_near_white_desaturation: parameters[61],
+            highlight_saturation_clamp: parameters[62],
+            highlight_hue_protection: parameters[63],
+            highlight_body_bias: parameters[64],
+            highlight_peak_damping: parameters[65],
+            shadow_falloff_shape: parameters[66],
+            shadow_lift_desaturation: parameters[67],
+            shadow_noise_chroma_protection: parameters[68],
+            shadow_hue_protection: parameters[69],
+            shadow_body_bias: parameters[70],
+            shadow_peak_damping: parameters[71],
+            white_falloff_shape: parameters[72],
+            white_shoulder_coupling: parameters[73],
+            white_chroma_protection: parameters[74],
+            white_desaturation_near_clip: parameters[75],
+            white_body_bias: parameters[76],
+            white_peak_damping: parameters[77],
+            black_falloff_shape: parameters[78],
+            black_toe_coupling: parameters[79],
+            black_chroma_protection: parameters[80],
+            black_density_saturation_coupling: parameters[81],
+            black_body_bias: parameters[82],
+            black_peak_damping: parameters[83],
+            tone_chroma_mode: parameters[84],
+            global_chroma_preservation: parameters[85],
+            saturation_min: parameters[86],
+            saturation_max: parameters[87],
+            neutral_protection: parameters[88],
+            skin_protection: parameters[89],
+            hue_stability: parameters[90],
+            gamut_compression_amount: parameters[91],
+            color_contrast_saturation_amount: parameters[92],
+            contrast_saturation_midtone_bias: parameters[93],
+            color_highlight_pull_desaturation: parameters[94],
+            color_highlight_near_white_desaturation: parameters[95],
+            color_shadow_lift_desaturation: parameters[96],
+            color_shadow_noise_chroma_protection: parameters[97],
+            color_black_density_saturation: parameters[98],
+            color_black_chroma_protection: parameters[99],
+            color_white_clip_desaturation: parameters[100],
+            color_white_chroma_protection: parameters[101],
+            overlay_influence_opacity: parameters[102],
+            overlay_saturation_scale: parameters[103],
+            overlay_neutral_drift_threshold: parameters[104],
+            highlight_lift_desaturation: parameters[105],
+            highlight_chroma_mode: parameters[106],
+            shadow_chroma_mode: parameters[107],
         })
     }
 }
@@ -1425,24 +1567,36 @@ pub fn apply_darkroom_tonal_curve_v1_z(input_z: f32, parameters: LightKernelPara
         - parameters.exposure_ev.max(0.0) * parameters.exposure_toe_follow_amount.max(0.0))
     .max(0.0);
     z -= toe_strength
-        * tone_zone_influence(-z, 0.0, parameters.toe_length_ev, 1.0, 0.0, 0.0, 0.0);
+        * tone_zone_influence(-z, 0.0, parameters.toe_length_ev, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0);
     z += parameters.exposure_shadow_lift_ev.max(0.0)
-        * tone_zone_influence(-z, 0.0, parameters.shadow_zone_start_ev, 1.0, 0.0, 0.0, 0.0);
+        * tone_zone_influence(
+            z,
+            parameters.exposure_shadow_start_ev,
+            parameters.exposure_shadow_full_ev,
+            parameters.exposure_shadow_falloff,
+            parameters.exposure_shadow_midtone_protection,
+            parameters.exposure_shadow_endpoint_protection,
+            0.0,
+            parameters.exposure_shadow_body_bias,
+            parameters.exposure_shadow_peak_damping,
+        );
     let shoulder_strength = parameters.shoulder_strength.max(0.0)
         + parameters.exposure_ev.max(0.0) * parameters.exposure_highlight_protection_per_ev.max(0.0)
         + parameters.white_shoulder_coupling.max(0.0) * parameters.whites_ev.max(0.0);
     z -= shoulder_strength
-        * tone_zone_influence(z, 0.0, parameters.shoulder_length_ev, 1.0, 0.0, 0.0, 0.0);
+        * tone_zone_influence(z, 0.0, parameters.shoulder_length_ev, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0);
 
     z += parameters.shadows_ev
         * tone_zone_influence(
-            -z,
+            z,
             parameters.shadow_zone_start_ev,
             parameters.shadow_zone_full_ev,
             parameters.shadow_falloff,
             parameters.shadow_midtone_protection,
             parameters.shadow_endpoint_protection,
             parameters.shadow_falloff_shape,
+            parameters.shadow_body_bias,
+            parameters.shadow_peak_damping,
         );
     z += parameters.highlights_ev
         * tone_zone_influence(
@@ -1453,16 +1607,20 @@ pub fn apply_darkroom_tonal_curve_v1_z(input_z: f32, parameters: LightKernelPara
             parameters.highlight_midtone_protection,
             parameters.highlight_endpoint_protection,
             parameters.highlight_falloff_shape,
+            parameters.highlight_body_bias,
+            parameters.highlight_peak_damping,
         );
     z += parameters.blacks_ev
         * tone_zone_influence(
-            -z,
+            z,
             parameters.black_zone_start_ev,
             parameters.black_zone_full_ev,
             parameters.black_softness,
             0.0,
             parameters.black_protection,
             parameters.black_falloff_shape,
+            parameters.black_body_bias,
+            parameters.black_peak_damping,
         );
     z += parameters.whites_ev
         * tone_zone_influence(
@@ -1473,6 +1631,8 @@ pub fn apply_darkroom_tonal_curve_v1_z(input_z: f32, parameters: LightKernelPara
             0.0,
             parameters.white_protection,
             parameters.white_falloff_shape,
+            parameters.white_body_bias,
+            parameters.white_peak_damping,
         );
 
     let centered = z - parameters.pivot_ev;
@@ -1503,6 +1663,19 @@ fn apply_color_coupling(
     let target_z = (target_luma.max(parameters.tone_epsilon)
         / parameters.middle_gray.max(parameters.tone_epsilon))
     .log2();
+    let skin_mask = skin_like_mask(red, green, blue, luma);
+    let gamut_risk_amount = gamut_risk(red, green, blue);
+    let skin_control = centered_control(parameters.skin_protection, 0.25);
+    let hue_control = centered_control(parameters.hue_stability, 0.85);
+    let tone_chroma_scale = 1.0
+        + (tone_chroma_mode_scale(parameters.tone_chroma_mode, target_z) - 1.0)
+            * color_change_scale(
+                skin_mask * skin_control.max(0.0),
+                skin_mask * (-skin_control).max(0.0),
+                gamut_risk_amount * hue_control.max(0.0),
+                gamut_risk_amount * (-hue_control).max(0.0),
+            );
+    let (red, green, blue) = scale_chroma_around_luma(red, green, blue, luma, tone_chroma_scale);
     let highlight_influence = tone_zone_influence(
         source_z,
         parameters.highlight_zone_start_ev,
@@ -1511,15 +1684,19 @@ fn apply_color_coupling(
         parameters.highlight_midtone_protection,
         parameters.highlight_endpoint_protection,
         parameters.highlight_falloff_shape,
+        parameters.highlight_body_bias,
+        parameters.highlight_peak_damping,
     );
     let shadow_influence = tone_zone_influence(
-        -source_z,
+        source_z,
         parameters.shadow_zone_start_ev,
         parameters.shadow_zone_full_ev,
         parameters.shadow_falloff,
         parameters.shadow_midtone_protection,
         parameters.shadow_endpoint_protection,
         parameters.shadow_falloff_shape,
+        parameters.shadow_body_bias,
+        parameters.shadow_peak_damping,
     );
     let white_influence = tone_zone_influence(
         source_z,
@@ -1529,15 +1706,19 @@ fn apply_color_coupling(
         0.0,
         parameters.white_protection,
         parameters.white_falloff_shape,
+        parameters.white_body_bias,
+        parameters.white_peak_damping,
     );
     let black_influence = tone_zone_influence(
-        -source_z,
+        source_z,
         parameters.black_zone_start_ev,
         parameters.black_zone_full_ev,
         parameters.black_softness,
         0.0,
         parameters.black_protection,
         parameters.black_falloff_shape,
+        parameters.black_body_bias,
+        parameters.black_peak_damping,
     );
     let contrast_curve = softsign((target_z - parameters.pivot_ev) / parameters.contrast_rolloff_ev.max(0.001));
     let contrast_weight = contrast_zone_weight(target_z, parameters.contrast_saturation_zone)
@@ -1547,9 +1728,19 @@ fn apply_color_coupling(
         * (parameters.contrast_strength * contrast_curve).abs()
         * contrast_weight;
     let highlight_pull = parameters.highlights_ev.min(0.0).abs() * highlight_influence;
+    let highlight_lift = parameters.highlights_ev.max(0.0) * highlight_influence;
     let shadow_lift = parameters.shadows_ev.max(0.0) * shadow_influence;
     let black_density = parameters.blacks_ev.min(0.0).abs() * black_influence;
     let white_clip_risk = smoothstep(0.92, 1.0, red.max(green).max(blue));
+    let highlight_pull_scale =
+        regional_pull_desaturation_scale(parameters.highlight_chroma_mode);
+    let highlight_lift_scale =
+        regional_lift_desaturation_scale(parameters.highlight_chroma_mode);
+    let shadow_lift_scale = regional_lift_desaturation_scale(parameters.shadow_chroma_mode);
+    let highlight_lift_desaturation =
+        parameters.highlight_lift_desaturation.max(0.0)
+            + regional_lift_desaturation_floor(parameters.highlight_chroma_mode)
+            + parameters.highlight_near_white_desaturation.max(0.0) * white_influence * 0.5;
     let exposure_sat = parameters.exposure_ev
         * parameters.exposure_chroma_response
         * smoothstep(parameters.saturation_min, parameters.saturation_max.max(parameters.saturation_min + 0.001), luma);
@@ -1557,12 +1748,16 @@ fn apply_color_coupling(
         - highlight_pull
             * (parameters.highlight_pull_desaturation
                 + parameters.color_highlight_pull_desaturation)
+            * highlight_pull_scale
         - highlight_pull
             * white_influence
             * (parameters.highlight_near_white_desaturation
                 + parameters.color_highlight_near_white_desaturation)
+            * highlight_pull_scale
+        - highlight_lift * highlight_lift_desaturation * highlight_lift_scale
         - shadow_lift
             * (parameters.shadow_lift_desaturation + parameters.color_shadow_lift_desaturation)
+            * shadow_lift_scale
         + black_density
             * (parameters.black_density_saturation_coupling
                 + parameters.color_black_density_saturation)
@@ -1581,19 +1776,187 @@ fn apply_color_coupling(
         .max(parameters.exposure_saturation_max)
         .max(min_sat + 0.001)
         .clamp(0.001, 3.0);
-    let saturation_multiplier = (1.0 + sat_delta).clamp(min_sat, max_sat);
+    let highlight_activity = (highlight_pull + highlight_lift).clamp(0.0, 1.0);
+    let highlight_saturation_ceiling = parameters
+        .highlight_saturation_clamp
+        .max(min_sat + 0.001)
+        .clamp(0.001, 3.0);
+    let effective_max_sat =
+        max_sat * (1.0 - highlight_activity) + max_sat.min(highlight_saturation_ceiling) * highlight_activity;
+    let saturation_multiplier =
+        (chroma_preservation_scale(parameters.global_chroma_preservation) + sat_delta)
+            .clamp(min_sat, effective_max_sat);
     let chroma = ((red - luma).powi(2) + (green - luma).powi(2) + (blue - luma).powi(2)).sqrt();
+    let chroma_ratio = chroma / luma.max(0.02);
+    let hue_risk = gamut_risk_amount.max(smoothstep(0.65, 2.0, chroma_ratio) * 0.4);
+    let shadow_noise_control = centered_control(
+        (parameters.shadow_noise_chroma_protection
+            + parameters.color_shadow_noise_chroma_protection)
+            * 0.5,
+        0.35,
+    );
+    let highlight_hue_control = centered_control(parameters.highlight_hue_protection, 0.8);
+    let shadow_hue_control = centered_control(parameters.shadow_hue_protection, 0.8);
+    let contrast_hue_control = centered_control(parameters.contrast_hue_protection, 0.8);
+    let white_chroma_control = centered_control(
+        (parameters.white_chroma_protection + parameters.color_white_chroma_protection) * 0.5,
+        0.35,
+    );
+    let black_chroma_control = centered_control(
+        (parameters.black_chroma_protection + parameters.color_black_chroma_protection) * 0.5,
+        0.45,
+    );
+    let shadow_noise_mask = (1.0 - smoothstep(0.02, 0.2, luma)) * shadow_influence;
+    let contrast_activity = (parameters.contrast_strength * contrast_curve).abs().clamp(0.0, 1.0);
     let neutral_mask =
         1.0 - smoothstep(0.0, parameters.overlay_neutral_drift_threshold.max(0.001) * 4.0, chroma);
+    let positive_protection = [
+        neutral_mask * parameters.neutral_protection.clamp(0.0, 1.0),
+        skin_mask * skin_control.max(0.0),
+        hue_risk * hue_control.max(0.0),
+        shadow_noise_mask * shadow_noise_control.max(0.0),
+        highlight_influence * hue_risk * highlight_hue_control.max(0.0),
+        shadow_influence * hue_risk * shadow_hue_control.max(0.0),
+        contrast_activity * hue_risk * contrast_hue_control.max(0.0),
+        white_influence * (0.35 + white_clip_risk * 0.65) * white_chroma_control.max(0.0),
+        black_influence * black_chroma_control.max(0.0),
+    ]
+    .into_iter()
+    .fold(0.0_f32, f32::max)
+    .clamp(0.0, 0.95);
+    let negative_freedom = [
+        skin_mask * (-skin_control).max(0.0),
+        hue_risk * (-hue_control).max(0.0),
+        shadow_noise_mask * (-shadow_noise_control).max(0.0),
+        highlight_influence * hue_risk * (-highlight_hue_control).max(0.0),
+        shadow_influence * hue_risk * (-shadow_hue_control).max(0.0),
+        contrast_activity * hue_risk * (-contrast_hue_control).max(0.0),
+        white_influence * (0.35 + white_clip_risk * 0.65) * (-white_chroma_control).max(0.0),
+        black_influence * (-black_chroma_control).max(0.0),
+    ]
+    .into_iter()
+    .fold(0.0_f32, f32::max)
+    .clamp(0.0, 1.0);
+    let saturation_change_scale = (1.0 - positive_protection + negative_freedom * 0.45).clamp(0.0, 1.6);
     let protected_multiplier = 1.0
-        + (saturation_multiplier - 1.0)
-            * (1.0 - neutral_mask * parameters.neutral_protection.clamp(0.0, 1.0));
+        + (saturation_multiplier - 1.0) * saturation_change_scale;
 
+    let (red, green, blue) = scale_chroma_around_luma(red, green, blue, luma, protected_multiplier);
+    let post_luma = working_luminance(red, green, blue, parameters).max(parameters.tone_epsilon);
+    let compression = parameters.gamut_compression_amount.clamp(0.0, 1.0)
+        * gamut_risk(red, green, blue)
+        * 0.85;
+
+    scale_chroma_around_luma(red, green, blue, post_luma, 1.0 - compression)
+}
+
+fn scale_chroma_around_luma(
+    red: f32,
+    green: f32,
+    blue: f32,
+    luma: f32,
+    scale: f32,
+) -> (f32, f32, f32) {
     (
-        (luma + (red - luma) * protected_multiplier).max(0.0),
-        (luma + (green - luma) * protected_multiplier).max(0.0),
-        (luma + (blue - luma) * protected_multiplier).max(0.0),
+        (luma + (red - luma) * scale).max(0.0),
+        (luma + (green - luma) * scale).max(0.0),
+        (luma + (blue - luma) * scale).max(0.0),
     )
+}
+
+fn skin_like_mask(red: f32, green: f32, blue: f32, luma: f32) -> f32 {
+    let chroma = ((red - luma).powi(2) + (green - luma).powi(2) + (blue - luma).powi(2)).sqrt();
+    let warm_order = smoothstep(0.0, 0.18, red - green)
+        * smoothstep(-0.02, 0.16, green - blue);
+    let not_extreme_red = 1.0 - smoothstep(0.4, 0.85, red - green);
+    let brightness = smoothstep(0.04, 0.35, luma) * (1.0 - smoothstep(1.2, 2.4, luma));
+    let colorfulness = smoothstep(0.015, 0.22, chroma);
+
+    (warm_order * not_extreme_red * brightness * colorfulness).clamp(0.0, 1.0)
+}
+
+fn gamut_risk(red: f32, green: f32, blue: f32) -> f32 {
+    smoothstep(0.92, 1.25, red.max(green).max(blue)).clamp(0.0, 1.0)
+}
+
+fn centered_control(value: f32, center: f32) -> f32 {
+    let value = value.clamp(0.0, 1.0);
+    let center = center.clamp(0.001, 0.999);
+
+    if value >= center {
+        ((value - center) / (1.0 - center).max(0.001)).clamp(0.0, 1.0)
+    } else {
+        -((center - value) / center.max(0.001)).clamp(0.0, 1.0)
+    }
+}
+
+fn color_change_scale(
+    skin_protection: f32,
+    skin_freedom: f32,
+    hue_protection: f32,
+    hue_freedom: f32,
+) -> f32 {
+    let positive = skin_protection.max(hue_protection).clamp(0.0, 0.95);
+    let negative = skin_freedom.max(hue_freedom).clamp(0.0, 1.0);
+
+    (1.0 - positive + negative * 0.35).clamp(0.0, 1.5)
+}
+
+fn chroma_preservation_scale(value: f32) -> f32 {
+    (1.0 + (value - 0.9) * 1.5).clamp(0.0, 1.5)
+}
+
+fn tone_chroma_mode_scale(mode: f32, target_z: f32) -> f32 {
+    let highlight_weight = smoothstep(0.0, 4.0, target_z.max(0.0));
+    let shadow_weight = smoothstep(0.0, 4.0, (-target_z).max(0.0));
+
+    let scale = if mode < 0.5 {
+        1.0
+    } else if mode < 1.5 {
+        1.0 - 0.3 * highlight_weight
+    } else if mode < 2.5 {
+        1.0 + 0.24 * (highlight_weight.max(shadow_weight))
+    } else {
+        1.0 - 0.16 * highlight_weight + 0.08 * shadow_weight
+    };
+
+    scale.clamp(0.45, 1.35)
+}
+
+fn regional_pull_desaturation_scale(mode: f32) -> f32 {
+    if mode < 0.5 {
+        1.0
+    } else if mode < 1.5 {
+        1.65
+    } else if mode < 2.5 {
+        0.35
+    } else {
+        1.15
+    }
+}
+
+fn regional_lift_desaturation_scale(mode: f32) -> f32 {
+    if mode < 0.5 {
+        0.0
+    } else if mode < 1.5 {
+        0.2
+    } else if mode < 2.5 {
+        0.55
+    } else {
+        1.0
+    }
+}
+
+fn regional_lift_desaturation_floor(mode: f32) -> f32 {
+    if mode < 0.5 {
+        0.0
+    } else if mode < 1.5 {
+        0.015
+    } else if mode < 2.5 {
+        0.04
+    } else {
+        0.07
+    }
 }
 
 fn contrast_zone_weight(z: f32, zone: f32) -> f32 {
@@ -1688,11 +2051,11 @@ fn shaped_exposure_response(exposure_ev: f32, tuning: ExposureFeelTuning) -> f32
 }
 
 fn endpoint_full_ev(tuning: EndpointToneTuning) -> f32 {
-    let full = tuning.full_ev.abs();
-    if full.is_finite() && full > tuning.start_ev.abs() {
-        full
+    if tuning.full_ev.is_finite() && (tuning.full_ev - tuning.start_ev).abs() > 0.001 {
+        tuning.full_ev
     } else {
-        tuning.start_ev.abs() + tuning.max_shift_ev.abs() * tuning.softness.max(0.001)
+        let sign = if tuning.start_ev < 0.0 { -1.0 } else { 1.0 };
+        sign * (tuning.start_ev.abs() + tuning.max_shift_ev.abs() * tuning.softness.max(0.001))
     }
 }
 
@@ -1708,43 +2071,54 @@ fn signed_smooth_unit(slider: f32) -> f32 {
 }
 
 fn tone_zone_influence(
-    distance_ev: f32,
+    position_ev: f32,
     start_ev: f32,
     full_ev: f32,
     falloff: f32,
     midtone_protection: f32,
     endpoint_protection: f32,
     falloff_shape: f32,
+    body_bias: f32,
+    peak_damping: f32,
 ) -> f32 {
-    let distance = distance_ev.max(0.0);
-    let start = start_ev.abs().max(0.0);
-    let mut full = full_ev.abs().max(start + 0.001);
-
-    if full <= start {
-        full = start + 0.001;
+    if !position_ev.is_finite() || !start_ev.is_finite() || !full_ev.is_finite() {
+        return 0.0;
     }
 
-    let base = falloff_base(start, full, distance, falloff_shape);
-    let shaped = base.powf(1.0 / falloff.clamp(0.1, 4.0));
+    let width = (full_ev - start_ev).abs().max(0.001);
+    let direction = if full_ev >= start_ev { 1.0 } else { -1.0 };
+    let progress = ((position_ev - start_ev) * direction) / width;
+    let base = falloff_base(progress, falloff_shape);
+    let body = base.powf(0.45);
+    let peak = base.powf(2.2);
+    let biased_base = if body_bias >= 0.0 {
+        base * (1.0 - body_bias.clamp(0.0, 1.0)) + body * body_bias.clamp(0.0, 1.0)
+    } else {
+        base * (1.0 - body_bias.abs().clamp(0.0, 1.0)) + peak * body_bias.abs().clamp(0.0, 1.0)
+    };
+    let shaped = biased_base.powf(1.0 / falloff.clamp(0.1, 4.0));
+    let gray_distance = (position_ev / 1.5).abs();
     let midtone_guard = 1.0
-        - midtone_protection.clamp(0.0, 0.95) * (1.0 - smoothstep(0.0, start.max(0.001), distance));
-    let endpoint_guard =
-        1.0 - endpoint_protection.clamp(0.0, 0.95) * smoothstep(full, full + 2.0, distance);
+        - midtone_protection.clamp(0.0, 0.95) * (-gray_distance * gray_distance).exp();
+    let endpoint_guard = 1.0
+        - endpoint_protection.clamp(0.0, 0.95) * smoothstep(1.0, 1.75, progress);
+    let peak_guard = 1.0 - peak_damping.clamp(0.0, 0.98) * smoothstep(0.55, 1.0, progress);
 
-    shaped * midtone_guard.clamp(0.05, 1.0) * endpoint_guard.clamp(0.05, 1.0)
+    shaped * midtone_guard.clamp(0.0, 1.0) * endpoint_guard.clamp(0.0, 1.0) * peak_guard.clamp(0.0, 1.0)
 }
 
-fn falloff_base(start: f32, full: f32, distance: f32, falloff_shape: f32) -> f32 {
-    let linear = ((distance - start) / (full - start).max(0.001)).clamp(0.0, 1.0);
+fn falloff_base(progress: f32, falloff_shape: f32) -> f32 {
+    let linear = progress.clamp(0.0, 1.0);
+    let smooth = smoothstep(0.0, 1.0, linear);
 
     if falloff_shape >= 2.5 {
-        smoothstep(start, full, distance).powf(1.75)
+        smooth.powf(1.75)
     } else if falloff_shape >= 1.5 {
-        smoothstep(start, full, distance).powf(0.65)
+        smooth.powf(0.65)
     } else if falloff_shape >= 0.5 {
         linear
     } else {
-        smoothstep(start, full, distance)
+        smooth
     }
 }
 
@@ -1792,8 +2166,58 @@ pub extern "C" fn darkroom_light_normalized_slider(slider: f32) -> f32 {
 }
 
 #[no_mangle]
+pub extern "C" fn darkroom_light_slider_response_with_mapping(
+    slider: f32,
+    near_zero_sensitivity: f32,
+    mid_sensitivity: f32,
+    extreme_sensitivity: f32,
+    response_exponent: f32,
+    soft_limit: f32,
+    dead_zone: f32,
+    positive_negative_symmetry: f32,
+) -> f32 {
+    slider_to_unit(
+        slider,
+        PerSliderMapping {
+            near_zero_sensitivity,
+            mid_sensitivity,
+            extreme_sensitivity,
+            response_exponent,
+            soft_limit,
+            dead_zone,
+            positive_negative_symmetry,
+        },
+    )
+}
+
+#[no_mangle]
 pub extern "C" fn darkroom_light_kernel_parameter_count() -> usize {
     LIGHT_KERNEL_PARAMETER_COUNT
+}
+
+#[no_mangle]
+pub extern "C" fn darkroom_tone_zone_influence_sample(
+    distance_ev: f32,
+    start_ev: f32,
+    full_ev: f32,
+    falloff: f32,
+    midtone_protection: f32,
+    endpoint_protection: f32,
+    falloff_shape: f32,
+    body_bias: f32,
+    peak_damping: f32,
+) -> f32 {
+    tone_zone_influence(
+        distance_ev,
+        start_ev,
+        full_ev,
+        falloff,
+        midtone_protection,
+        endpoint_protection,
+        falloff_shape,
+        body_bias,
+        peak_damping,
+    )
 }
 
 #[no_mangle]
@@ -2127,6 +2551,11 @@ mod tests {
         );
     }
 
+    fn test_chroma(red: f32, green: f32, blue: f32) -> f32 {
+        let luma = red * LUMA_RED + green * LUMA_GREEN + blue * LUMA_BLUE;
+        ((red - luma).powi(2) + (green - luma).powi(2) + (blue - luma).powi(2)).sqrt()
+    }
+
     #[test]
     fn exposure_ev_zero_is_identity() {
         assert_close(apply_exposure_scene_linear(0.18, 0.0), 0.18);
@@ -2201,6 +2630,37 @@ mod tests {
     }
 
     #[test]
+    fn mapped_slider_response_ffi_matches_core_mapping() {
+        for slider in [-100.0, -50.0, -10.0, 0.0, 10.0, 50.0, 100.0] {
+            assert_close(
+                darkroom_light_slider_response_with_mapping(
+                    slider, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0,
+                ),
+                normalize_adjustment_slider(slider),
+            );
+        }
+
+        assert_close(
+            darkroom_light_slider_response_with_mapping(
+                10.0, 0.0, 1.0, 1.0, 1.0, 0.35, 0.2, 1.0,
+            ),
+            0.0,
+        );
+        assert_close(
+            darkroom_light_slider_response_with_mapping(
+                100.0, 0.0, 1.0, 1.0, 1.0, 0.35, 0.2, 1.0,
+            ),
+            0.35,
+        );
+        assert_close(
+            darkroom_light_slider_response_with_mapping(
+                -100.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.5,
+            ),
+            -0.5,
+        );
+    }
+
+    #[test]
     fn custom_tuning_can_expand_highlight_and_shadow_strength() {
         let mut tuning = ToneTuning::default();
         tuning.highlights.start_ev = 0.35;
@@ -2228,17 +2688,56 @@ mod tests {
         assert!(
             tuned_parameters.highlight_zone_start_ev < default_parameters.highlight_zone_start_ev
         );
-        assert!(tuned_parameters.shadow_zone_start_ev < default_parameters.shadow_zone_start_ev);
+        assert!(tuned_parameters.shadow_zone_start_ev > default_parameters.shadow_zone_start_ev);
     }
 
     #[test]
-    fn light_recipe_applies_exposure_as_real_stops() {
+    fn region_curve_body_bias_and_peak_damping_shape_influence() {
+        let neutral_body = tone_zone_influence(2.0, 0.5, 4.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        let biased_body = tone_zone_influence(2.0, 0.5, 4.0, 1.0, 0.0, 0.0, 0.0, 0.75, 0.0);
+        let neutral_peak = tone_zone_influence(5.0, 0.5, 4.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        let damped_peak = tone_zone_influence(5.0, 0.5, 4.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.75);
+
+        assert!(biased_body > neutral_body);
+        assert!(damped_peak < neutral_peak);
+    }
+
+    #[test]
+    fn light_recipe_preserves_exposure_gain_as_real_stops() {
         let recipe = LightRecipe {
             exposure_ev: 1.0,
             ..Default::default()
         };
+        let parameters = recipe.kernel_parameters();
 
-        assert_close(recipe.apply_luma_reference(0.18), 0.36);
+        assert_close(parameters.exposure_gain, 2.0);
+        assert!(recipe.apply_luma_reference(MIDDLE_GRAY) > MIDDLE_GRAY);
+    }
+
+    #[test]
+    fn exposure_feel_shadow_curve_can_expand_dark_luma_without_changing_stop_gain() {
+        let recipe = LightRecipe {
+            exposure_ev: 1.0,
+            ..Default::default()
+        };
+        let mut neutral = BehaviorTuning::default();
+        neutral.exposure_feel.shadow_visibility_per_ev = 0.0;
+        let mut strong = BehaviorTuning::default();
+        strong.exposure_feel.black_participation = 1.0;
+        strong.exposure_feel.shadow_visibility_per_ev = 1.0;
+        strong.exposure_feel.shadow_start_ev = 0.0;
+        strong.exposure_feel.shadow_full_ev = -6.0;
+
+        let neutral_parameters = recipe.kernel_parameters_with_behavior_tuning(neutral);
+        let strong_parameters = recipe.kernel_parameters_with_behavior_tuning(strong);
+
+        assert_close(strong_parameters.exposure_gain, 2.0);
+        assert_close(neutral_parameters.exposure_gain, 2.0);
+        assert_close(strong_parameters.exposure_shadow_full_ev, -6.0);
+        assert!(
+            apply_light_luma_reference(0.02, strong_parameters)
+                > apply_light_luma_reference(0.02, neutral_parameters)
+        );
     }
 
     #[test]
@@ -2335,6 +2834,78 @@ mod tests {
     }
 
     #[test]
+    fn highlight_chroma_mode_and_lift_desaturation_affect_lifted_highlight_color() {
+        let recipe = LightRecipe {
+            highlights_slider: 100.0,
+            ..Default::default()
+        };
+        let mut preserve = ToneTuning::default();
+        preserve.highlights.chroma_mode = 0.0;
+        preserve.highlights.lift_desaturation = 0.0;
+        let mut hybrid = preserve;
+        hybrid.highlights.chroma_mode = 3.0;
+        hybrid.highlights.lift_desaturation = 0.4;
+
+        let preserve_parameters = recipe.kernel_parameters_with_tuning(preserve);
+        let hybrid_parameters = recipe.kernel_parameters_with_tuning(hybrid);
+        assert_close(preserve_parameters.highlight_chroma_mode, 0.0);
+        assert_close(hybrid_parameters.highlight_chroma_mode, 3.0);
+        assert_close(hybrid_parameters.highlight_lift_desaturation, 0.4);
+
+        let preserve_rgb = apply_light_rgb_kernel(1.0, 0.42, 0.18, preserve_parameters);
+        let hybrid_rgb = apply_light_rgb_kernel(1.0, 0.42, 0.18, hybrid_parameters);
+
+        assert!(test_chroma(hybrid_rgb.0, hybrid_rgb.1, hybrid_rgb.2)
+            < test_chroma(preserve_rgb.0, preserve_rgb.1, preserve_rgb.2));
+    }
+
+    #[test]
+    fn color_coupling_protection_controls_affect_chroma_response() {
+        let recipe = LightRecipe {
+            contrast_slider: 80.0,
+            highlights_slider: 100.0,
+            whites_slider: 100.0,
+            ..Default::default()
+        };
+        let mut free = BehaviorTuning::default();
+        free.color_coupling.tone_chroma_mode = 2.0;
+        free.color_coupling.global_chroma_preservation = 1.0;
+        free.color_coupling.saturation_max = 1.6;
+        free.color_coupling.skin_protection = 0.0;
+        free.color_coupling.hue_stability = 0.0;
+        free.color_coupling.gamut_compression_amount = 0.0;
+        free.tone.highlights.hue_protection = 0.0;
+        free.tone.whites.chroma_protection = 0.0;
+
+        let mut protected = free;
+        protected.color_coupling.skin_protection = 1.0;
+        protected.color_coupling.hue_stability = 1.0;
+        protected.color_coupling.gamut_compression_amount = 1.0;
+        protected.tone.highlights.hue_protection = 1.0;
+        protected.tone.whites.chroma_protection = 1.0;
+
+        let free_rgb = apply_light_rgb_kernel(
+            1.15,
+            0.48,
+            0.24,
+            recipe.kernel_parameters_with_behavior_tuning(free),
+        );
+        let protected_rgb = apply_light_rgb_kernel(
+            1.15,
+            0.48,
+            0.24,
+            recipe.kernel_parameters_with_behavior_tuning(protected),
+        );
+
+        assert!(test_chroma(protected_rgb.0, protected_rgb.1, protected_rgb.2)
+            < test_chroma(free_rgb.0, free_rgb.1, free_rgb.2));
+        assert!(
+            protected_rgb.0.max(protected_rgb.1).max(protected_rgb.2)
+                <= free_rgb.0.max(free_rgb.1).max(free_rgb.2)
+        );
+    }
+
+    #[test]
     fn extreme_tonal_curve_remains_monotonic() {
         let parameters = LightRecipe {
             contrast_slider: 100.0,
@@ -2390,8 +2961,8 @@ mod tests {
         };
         assert_eq!(tuning_succeeded, 1);
         assert_close(tuning_floats[0], MIDDLE_GRAY);
-        assert_close(tuning_floats[77], 0.0);
-        assert_close(tuning_floats[78], 1.0);
+        assert_close(tuning_floats[85], 0.0);
+        assert_close(tuning_floats[86], 1.0);
 
         tuning_floats[26] = -3.0;
         let mut kernel_floats = [0.0_f32; LIGHT_KERNEL_PARAMETER_COUNT];
@@ -2426,9 +2997,9 @@ mod tests {
         };
         assert_eq!(behavior_succeeded, 1);
         assert_close(behavior_floats[0], MIDDLE_GRAY);
-        assert_close(behavior_floats[119], 1.0);
+        assert_close(behavior_floats[127], 1.0);
 
-        behavior_floats[120] = 2.0;
+        behavior_floats[128] = 2.0;
         let mut kernel_floats = [0.0_f32; LIGHT_KERNEL_PARAMETER_COUNT];
         let kernel_succeeded = unsafe {
             darkroom_light_kernel_parameters_with_behavior_tuning(
@@ -2492,13 +3063,18 @@ mod tests {
     }
 
     #[test]
-    fn rgba_apply_recipe_one_stop_doubles_brightness() {
+    fn rgba_apply_recipe_one_stop_doubles_brightness_without_behavior_helpers() {
         let pixels = [64_u8, 64, 64, 255];
+        let mut behavior = BehaviorTuning::default();
+        behavior.exposure_feel.toe_follow_amount = 0.0;
+        behavior.exposure_feel.shadow_visibility_per_ev = 0.0;
+        behavior.exposure_feel.highlight_protection_per_ev = 0.0;
+        behavior.exposure_feel.exposure_chroma_response = 0.0;
         let parameters_floats = LightRecipe {
             exposure_ev: 1.0,
             ..Default::default()
         }
-        .kernel_parameters()
+        .kernel_parameters_with_behavior_tuning(behavior)
         .to_floats();
         let mut red = [99_u32; 256];
         let mut green = [99_u32; 256];

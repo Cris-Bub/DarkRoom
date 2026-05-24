@@ -129,6 +129,13 @@ struct ExposureFeelTuning: Codable, Equatable, Hashable, Sendable {
     var exposureChromaResponse: Double
     var saturationMin: Double
     var saturationMax: Double
+    var shadowStartEV: Double
+    var shadowFullEV: Double
+    var shadowFalloff: Double
+    var shadowMidtoneProtection: Double
+    var shadowEndpointProtection: Double
+    var shadowBodyBias: Double
+    var shadowPeakDamping: Double
 
     static let defaultV2 = ExposureFeelTuning(
         evGainScale: 1.0,
@@ -139,10 +146,74 @@ struct ExposureFeelTuning: Codable, Equatable, Hashable, Sendable {
         highlightProtectionPerEV: 0.15,
         exposureChromaResponse: 0.0,
         saturationMin: 0.92,
-        saturationMax: 1.08
+        saturationMax: 1.08,
+        shadowStartEV: 0.0,
+        shadowFullEV: -4.0,
+        shadowFalloff: 1.0,
+        shadowMidtoneProtection: 0.0,
+        shadowEndpointProtection: 0.0,
+        shadowBodyBias: 0.0,
+        shadowPeakDamping: 0.0
     )
 
     static let suggestedCandidate01 = defaultV2
+
+    init(
+        evGainScale: Double,
+        responseExponent: Double,
+        blackParticipation: Double,
+        toeFollowAmount: Double,
+        shadowVisibilityPerEV: Double,
+        highlightProtectionPerEV: Double,
+        exposureChromaResponse: Double,
+        saturationMin: Double,
+        saturationMax: Double,
+        shadowStartEV: Double,
+        shadowFullEV: Double,
+        shadowFalloff: Double,
+        shadowMidtoneProtection: Double,
+        shadowEndpointProtection: Double,
+        shadowBodyBias: Double,
+        shadowPeakDamping: Double
+    ) {
+        self.evGainScale = evGainScale
+        self.responseExponent = responseExponent
+        self.blackParticipation = blackParticipation
+        self.toeFollowAmount = toeFollowAmount
+        self.shadowVisibilityPerEV = shadowVisibilityPerEV
+        self.highlightProtectionPerEV = highlightProtectionPerEV
+        self.exposureChromaResponse = exposureChromaResponse
+        self.saturationMin = saturationMin
+        self.saturationMax = saturationMax
+        self.shadowStartEV = shadowStartEV
+        self.shadowFullEV = shadowFullEV
+        self.shadowFalloff = shadowFalloff
+        self.shadowMidtoneProtection = shadowMidtoneProtection
+        self.shadowEndpointProtection = shadowEndpointProtection
+        self.shadowBodyBias = shadowBodyBias
+        self.shadowPeakDamping = shadowPeakDamping
+    }
+
+    init(from decoder: Decoder) throws {
+        let fallback = Self.defaultV2
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        evGainScale = try container.decodeIfPresent(Double.self, forKey: .evGainScale) ?? fallback.evGainScale
+        responseExponent = try container.decodeIfPresent(Double.self, forKey: .responseExponent) ?? fallback.responseExponent
+        blackParticipation = try container.decodeIfPresent(Double.self, forKey: .blackParticipation) ?? fallback.blackParticipation
+        toeFollowAmount = try container.decodeIfPresent(Double.self, forKey: .toeFollowAmount) ?? fallback.toeFollowAmount
+        shadowVisibilityPerEV = try container.decodeIfPresent(Double.self, forKey: .shadowVisibilityPerEV) ?? fallback.shadowVisibilityPerEV
+        highlightProtectionPerEV = try container.decodeIfPresent(Double.self, forKey: .highlightProtectionPerEV) ?? fallback.highlightProtectionPerEV
+        exposureChromaResponse = try container.decodeIfPresent(Double.self, forKey: .exposureChromaResponse) ?? fallback.exposureChromaResponse
+        saturationMin = try container.decodeIfPresent(Double.self, forKey: .saturationMin) ?? fallback.saturationMin
+        saturationMax = try container.decodeIfPresent(Double.self, forKey: .saturationMax) ?? fallback.saturationMax
+        shadowStartEV = try container.decodeIfPresent(Double.self, forKey: .shadowStartEV) ?? fallback.shadowStartEV
+        shadowFullEV = try container.decodeIfPresent(Double.self, forKey: .shadowFullEV) ?? fallback.shadowFullEV
+        shadowFalloff = try container.decodeIfPresent(Double.self, forKey: .shadowFalloff) ?? fallback.shadowFalloff
+        shadowMidtoneProtection = try container.decodeIfPresent(Double.self, forKey: .shadowMidtoneProtection) ?? fallback.shadowMidtoneProtection
+        shadowEndpointProtection = try container.decodeIfPresent(Double.self, forKey: .shadowEndpointProtection) ?? fallback.shadowEndpointProtection
+        shadowBodyBias = try container.decodeIfPresent(Double.self, forKey: .shadowBodyBias) ?? fallback.shadowBodyBias
+        shadowPeakDamping = try container.decodeIfPresent(Double.self, forKey: .shadowPeakDamping) ?? fallback.shadowPeakDamping
+    }
 
     var flatParameters: [Float] {
         [
@@ -155,6 +226,13 @@ struct ExposureFeelTuning: Codable, Equatable, Hashable, Sendable {
             Float(exposureChromaResponse),
             Float(saturationMin),
             Float(saturationMax),
+            Float(shadowStartEV),
+            Float(shadowFullEV),
+            Float(shadowFalloff),
+            Float(shadowMidtoneProtection),
+            Float(shadowEndpointProtection),
+            Float(shadowBodyBias),
+            Float(shadowPeakDamping),
         ]
     }
 }

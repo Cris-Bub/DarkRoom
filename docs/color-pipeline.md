@@ -44,7 +44,8 @@ This is display-management accuracy, not Lightroom visual matching. Lightroom/Ca
 
 - Exposure is a scene-linear stop control: `output = input * 2^EV`.
 - The V1 tonal model computes Linear ROMM RGB luminance, maps it in log2 stops around middle gray `0.18`, then applies the resulting luminance gain back to RGB to preserve hue better than per-channel contrast.
-- `ToneTuning` is a hidden developer layer for adjusting the V1 tonal model's constants live. Normal user recipes store slider values; tuning decides how those values map into influence zones, endpoint softness, slider sensitivity, contrast softness, and optional base toe/shoulder shaping.
+- `ToneTuning` and `BehaviorTuning` are hidden developer layers for adjusting the V1 tonal model's constants live. Normal user recipes store slider values; tuning decides how those values map into influence zones, endpoint softness, slider sensitivity, contrast softness, optional base toe/shoulder shaping, exposure-shadow visibility response, and debug-only chroma/saturation coupling.
+- Tone Lab exposure-feel controls must not replace the real stop gain with a local shadow slider. They may shape the surrounding toe, shoulder, shadow visibility, and chroma response so the displayed result can be tuned while exposure itself remains camera-like.
 - Contrast and Pivot are one curve pair: contrast controls midtone separation, while pivot moves the EV center of that contrast response.
 - Highlights and shadows should behave like bounded broad-zone tone controls, not independent high/low gain multipliers. Whites and blacks should control endpoint energy/density without hard clipping in normal use. Extreme settings must preserve tone ordering.
 - Display transforms are separate from edit operations.

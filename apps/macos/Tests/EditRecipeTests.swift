@@ -57,7 +57,7 @@ final class EditRecipeTests: XCTestCase {
         XCTAssertLessThan(tunedParameters[3], defaultParameters[3])
         XCTAssertGreaterThan(tunedParameters[4], defaultParameters[4])
         XCTAssertLessThan(tunedParameters[16], defaultParameters[16])
-        XCTAssertLessThan(tunedParameters[14], defaultParameters[14])
+        XCTAssertGreaterThan(tunedParameters[14], defaultParameters[14])
         XCTAssertEqual(light.highlights, -100)
         XCTAssertEqual(light.shadows, 100)
     }
@@ -77,6 +77,41 @@ final class EditRecipeTests: XCTestCase {
         XCTAssertEqual(tunedParameters[4], defaultParameters[4], accuracy: 0.000_001)
     }
 
+    func testPerSliderMappingResponseSamplerUsesCoreMath() {
+        for slider in [-100.0, -50.0, -10.0, 0.0, 10.0, 50.0, 100.0] {
+            XCTAssertEqual(
+                DarkroomCoreLightMath.sliderResponse(slider: slider, mapping: .defaultV1),
+                DarkroomCoreLightMath.normalizedSlider(slider),
+                accuracy: 0.000_001
+            )
+        }
+
+        var mapping = PerSliderMapping.defaultV1
+        mapping.deadZone = 0.2
+        mapping.softLimit = 0.35
+        mapping.positiveNegativeSymmetry = 0.5
+
+        XCTAssertEqual(DarkroomCoreLightMath.sliderResponse(slider: 10, mapping: mapping), 0, accuracy: 0.000_001)
+        XCTAssertEqual(DarkroomCoreLightMath.sliderResponse(slider: 100, mapping: mapping), 0.35, accuracy: 0.000_001)
+        XCTAssertEqual(DarkroomCoreLightMath.sliderResponse(slider: -100, mapping: mapping), -0.35, accuracy: 0.000_001)
+    }
+
+    func testRegionalChromaModesReachKernelParameters() {
+        var light = LightAdjustments()
+        light.highlights = 100
+
+        var tuning = ToneTuning.defaultV1
+        tuning.highlights.chromaMode = .hybrid
+        tuning.highlights.liftDesaturation = 0.4
+        tuning.shadows.chromaMode = .protectChroma
+
+        let parameters = light.kernelParameters(toneTuning: tuning)
+
+        XCTAssertEqual(parameters[105], 0.4, accuracy: 0.000_001)
+        XCTAssertEqual(parameters[106], 3.0, accuracy: 0.000_001)
+        XCTAssertEqual(parameters[107], 2.0, accuracy: 0.000_001)
+    }
+
     func testBehaviorTuningDrivesKernelParametersWithoutChangingExposureStops() {
         var light = LightAdjustments()
         light.exposureEV = 1
@@ -84,11 +119,15 @@ final class EditRecipeTests: XCTestCase {
         var behavior = BehaviorTuning.defaultV2
         behavior.exposureFeelTuning.responseExponent = 2.0
         behavior.exposureFeelTuning.shadowVisibilityPerEV = 0.5
+        behavior.exposureFeelTuning.shadowFullEV = -6.0
+        behavior.exposureFeelTuning.shadowBodyBias = 0.5
 
         let tunedParameters = light.kernelParameters(behaviorTuning: behavior)
 
         XCTAssertEqual(tunedParameters[0], 2, accuracy: 0.000_001)
         XCTAssertGreaterThan(tunedParameters[40], 0)
+        XCTAssertEqual(tunedParameters[47], -6.0, accuracy: 0.000_001)
+        XCTAssertEqual(tunedParameters[51], 0.5, accuracy: 0.000_001)
     }
 
     func testToneTuningCopiesAsReadableJSON() throws {
@@ -109,6 +148,8 @@ final class EditRecipeTests: XCTestCase {
         XCTAssertTrue(json.contains("\"exposureFeelTuning\""))
         XCTAssertTrue(json.contains("\"colorCouplingTuning\""))
         XCTAssertTrue(json.contains("\"sliderMappings\""))
+        XCTAssertTrue(json.contains("\"bodyBias\""))
+        XCTAssertTrue(json.contains("\"peakDamping\""))
     }
 
     func testBehaviorTuningDecodesOlderEndpointJSONWithDerivedFullEV() throws {
@@ -221,6 +262,8 @@ final class EditRecipeTests: XCTestCase {
 
         XCTAssertEqual(decoded.toneTuning.whites.fullEV, 5.0, accuracy: 0.000_001)
         XCTAssertEqual(decoded.toneTuning.blacks.fullEV, -5.0, accuracy: 0.000_001)
+        XCTAssertEqual(decoded.toneTuning.highlights.bodyBias, 0, accuracy: 0.000_001)
+        XCTAssertEqual(decoded.toneTuning.whites.peakDamping, 0, accuracy: 0.000_001)
         XCTAssertEqual(decoded.overlayTuning, .defaultV2)
     }
 

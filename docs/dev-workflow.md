@@ -10,6 +10,14 @@ DarkRoom should be developed from Cursor or VS Code with terminal scripts as the
 ./scripts/dev.sh
 ```
 
+Equivalent `make` aliases are available for the common loop:
+
+```bash
+make doctor
+make generate
+make dev
+```
+
 During implementation:
 
 ```bash
@@ -18,12 +26,28 @@ During implementation:
 ./scripts/test.sh
 ```
 
+Or:
+
+```bash
+make test-rust
+make test-swift
+make test
+```
+
 Before committing:
 
 ```bash
 ./scripts/format.sh
 ./scripts/lint.sh
 ./scripts/test.sh
+```
+
+Or:
+
+```bash
+make format
+make lint
+make test
 ```
 
 ## Xcode Role

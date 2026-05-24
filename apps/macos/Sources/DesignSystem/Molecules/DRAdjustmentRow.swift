@@ -7,6 +7,8 @@ struct DRAdjustmentRow: View {
     let range: ClosedRange<Double>
     let displayValue: String
     var helpText: String?
+    var resetValue: Double? = nil
+    var showsHelpButton = false
     var onEditingChanged: (Bool) -> Void = { _ in }
 
     @FocusState private var isValueFieldFocused: Bool
@@ -16,13 +18,25 @@ struct DRAdjustmentRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: DarkRoomDesign.Spacing.small) {
             HStack {
-                Text(title)
-                    .font(DarkRoomDesign.Typography.controlLabel)
-                    .foregroundStyle(DarkRoomDesign.Palette.subtleText)
+                HStack(spacing: DarkRoomDesign.Spacing.xSmall) {
+                    Text(title)
+                        .font(DarkRoomDesign.Typography.controlLabel)
+                        .foregroundStyle(DarkRoomDesign.Palette.subtleText)
+
+                    if showsHelpButton, let helpText {
+                        DRHelpPopoverButton(title: title, helpText: helpText)
+                    }
+                }
 
                 Spacer()
 
-                valueControl
+                HStack(spacing: DarkRoomDesign.Spacing.small) {
+                    valueControl
+
+                    if let resetValue {
+                        resetButton(resetValue)
+                    }
+                }
             }
 
             DRAdjustmentSlider(
@@ -31,7 +45,23 @@ struct DRAdjustmentRow: View {
                 onEditingChanged: onEditingChanged
             )
         }
-        .help(helpText ?? title)
+        .help(showsHelpButton ? title : (helpText ?? title))
+    }
+
+    private func resetButton(_ resetValue: Double) -> some View {
+        Button {
+            reset(to: resetValue)
+        } label: {
+            Image(systemName: "arrow.counterclockwise")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(DarkRoomDesign.Palette.subtleText)
+                .frame(width: 18, height: 18)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(value == resetValue)
+        .opacity(value == resetValue ? 0.32 : 1)
+        .help("Reset \(title)")
     }
 
     @ViewBuilder
@@ -98,6 +128,12 @@ struct DRAdjustmentRow: View {
         finishValueEditing()
     }
 
+    private func reset(to resetValue: Double) {
+        value = min(max(resetValue, range.lowerBound), range.upperBound)
+        finishValueEditing()
+        onEditingChanged(false)
+    }
+
     private func finishValueEditing() {
         guard isEditingValue else {
             return
@@ -127,5 +163,61 @@ struct DRAdjustmentRow: View {
         String(format: "%.4f", value)
             .replacingOccurrences(of: "0+$", with: "", options: .regularExpression)
             .replacingOccurrences(of: "\\.$", with: "", options: .regularExpression)
+    }
+}
+
+struct DRHelpPopoverButton: View {
+    let title: String
+    let helpText: String
+
+    @State private var isPresented = false
+    @State private var closeTask: Task<Void, Never>?
+
+    var body: some View {
+        Button {
+            closeTask?.cancel()
+            isPresented.toggle()
+        } label: {
+            Image(systemName: "info.circle")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(DarkRoomDesign.Palette.subtleText)
+                .frame(width: 14, height: 14)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .opacity(0.78)
+        .accessibilityLabel("About \(title)")
+        .onHover(perform: updateHover)
+        .popover(isPresented: $isPresented, arrowEdge: .top) {
+            VStack(alignment: .leading, spacing: DarkRoomDesign.Spacing.xSmall) {
+                Text(title)
+                    .font(DarkRoomDesign.Typography.controlLabel)
+                    .foregroundStyle(DarkRoomDesign.Palette.primaryText)
+
+                Text(helpText)
+                    .font(DarkRoomDesign.Typography.detailLabel)
+                    .foregroundStyle(DarkRoomDesign.Palette.subtleText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(width: 260, alignment: .leading)
+            .padding(DarkRoomDesign.Spacing.medium)
+        }
+    }
+
+    private func updateHover(_ isHovering: Bool) {
+        closeTask?.cancel()
+
+        if isHovering {
+            isPresented = true
+        } else {
+            closeTask = Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 260_000_000)
+                guard !Task.isCancelled else {
+                    return
+                }
+
+                isPresented = false
+            }
+        }
     }
 }

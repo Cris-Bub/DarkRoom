@@ -106,6 +106,47 @@ enum DarkroomCoreLightMath {
     static func normalizedSlider(_ value: Double) -> Double {
         Double(darkroomLightNormalizedSlider(Float(value)))
     }
+
+    static func sliderResponse(slider: Double, mapping: PerSliderMapping) -> Double {
+        Double(
+            darkroomLightSliderResponseWithMapping(
+                Float(slider),
+                Float(mapping.nearZeroSensitivity),
+                Float(mapping.midSensitivity),
+                Float(mapping.extremeSensitivity),
+                Float(mapping.responseExponent),
+                Float(mapping.softLimit),
+                Float(mapping.deadZone),
+                Float(mapping.positiveNegativeSymmetry)
+            )
+        )
+    }
+
+    static func zoneInfluenceSample(
+        distanceEV: Double,
+        startEV: Double,
+        fullEV: Double,
+        falloff: Double,
+        midtoneProtection: Double,
+        endpointProtection: Double,
+        falloffShape: FalloffShape,
+        bodyBias: Double,
+        peakDamping: Double
+    ) -> Double {
+        Double(
+            darkroomToneZoneInfluenceSample(
+                Float(distanceEV),
+                Float(startEV),
+                Float(fullEV),
+                Float(falloff),
+                Float(midtoneProtection),
+                Float(endpointProtection),
+                Float(falloffShape.kernelValue),
+                Float(bodyBias),
+                Float(peakDamping)
+            )
+        )
+    }
 }
 
 @_silgen_name("darkroom_light_exposure_gain")
@@ -114,8 +155,33 @@ private func darkroomLightExposureGain(_ exposureEV: Float) -> Float
 @_silgen_name("darkroom_light_normalized_slider")
 private func darkroomLightNormalizedSlider(_ value: Float) -> Float
 
+@_silgen_name("darkroom_light_slider_response_with_mapping")
+private func darkroomLightSliderResponseWithMapping(
+    _ slider: Float,
+    _ nearZeroSensitivity: Float,
+    _ midSensitivity: Float,
+    _ extremeSensitivity: Float,
+    _ responseExponent: Float,
+    _ softLimit: Float,
+    _ deadZone: Float,
+    _ positiveNegativeSymmetry: Float
+) -> Float
+
 @_silgen_name("darkroom_light_kernel_parameter_count")
 private func darkroomLightKernelParameterCount() -> Int
+
+@_silgen_name("darkroom_tone_zone_influence_sample")
+private func darkroomToneZoneInfluenceSample(
+    _ distanceEV: Float,
+    _ startEV: Float,
+    _ fullEV: Float,
+    _ falloff: Float,
+    _ midtoneProtection: Float,
+    _ endpointProtection: Float,
+    _ falloffShape: Float,
+    _ bodyBias: Float,
+    _ peakDamping: Float
+) -> Float
 
 @_silgen_name("darkroom_tone_tuning_parameter_count")
 private func darkroomToneTuningParameterCount() -> Int

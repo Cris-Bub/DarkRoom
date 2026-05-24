@@ -50,6 +50,16 @@ Affords: workspace-wide Cargo commands such as `cargo test --workspace`.
 
 Update when: crates are added, removed, renamed, or workspace dependency policy changes.
 
+## `Makefile`
+
+Purpose: short developer command aliases for the stable shell scripts under `scripts/`.
+
+Depends on: `make` being available on the developer machine and the script entrypoints remaining stable.
+
+Affords: memorable commands such as `make dev`, `make test-rust`, and `make lint` without implying a Node or npm runtime.
+
+Update when: developer script names are added, removed, or renamed.
+
 ## `LICENSE`
 
 Purpose: open-source license grant.
